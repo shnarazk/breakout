@@ -1,17 +1,23 @@
 # juicy breakout in Rust with Bevy
 
+## Objective
 
-### TODO
+Let's make [the official example](https://github.com/bevyengine/bevy/blob/458cb7a9e93dab3127bb99ce7bf8cfc3af18851d/examples/game/breakout.rs) **juicy**.
+
+## TODO
 
 - [x] animated background
 - [ ] ease in/out
 - [ ] rotating ball
 - [ ] scaling ball
 - [ ] accelerating ball
+- [ ] trailing ball
 - [ ] wobble bricks
-- [ ] particles
-- [ ] eyes and mouth
 - [ ] sound effects
+- [ ] background music
+- [ ] particles
+- [ ] shaking screen
+- [ ] eyes and mouth
 
 ### References
 
