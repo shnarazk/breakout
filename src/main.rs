@@ -1,16 +1,22 @@
-use bevy::{
+use {
+    bevy::{
     core::FixedTimestep,
     prelude::*,
     sprite::collide_aabb::{collide, Collision},
+    },
+    breakout::background::ColoredMesh2dPlugin,
 };
 
 /// An implementation of the classic game "Breakout"
 const TIME_STEP: f32 = 1.0 / 60.0;
+const SPRITE_Z: f32 = 1.0; 
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(Scoreboard { score: 0 })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
+        .add_plugin(ColoredMesh2dPlugin)
         .add_startup_system(setup)
         .add_system_set(
             SystemSet::new()
@@ -55,7 +61,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(0.0, -215.0, 0.0),
+                translation: Vec3::new(0.0, -215.0, SPRITE_Z),
                 scale: Vec3::new(120.0, 30.0, 0.0),
                 ..Default::default()
             },
@@ -72,7 +78,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn_bundle(SpriteBundle {
             transform: Transform {
                 scale: Vec3::new(30.0, 30.0, 0.0),
-                translation: Vec3::new(0.0, -50.0, 1.0),
+                translation: Vec3::new(0.0, -50.0, SPRITE_Z),
                 ..Default::default()
             },
             sprite: Sprite {
@@ -128,7 +134,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(-bounds.x / 2.0, 0.0, 0.0),
+                translation: Vec3::new(-bounds.x / 2.0, 0.0, SPRITE_Z),
                 scale: Vec3::new(wall_thickness, bounds.y + wall_thickness, 1.0),
                 ..Default::default()
             },
@@ -143,7 +149,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(bounds.x / 2.0, 0.0, 0.0),
+                translation: Vec3::new(bounds.x / 2.0, 0.0, SPRITE_Z),
                 scale: Vec3::new(wall_thickness, bounds.y + wall_thickness, 1.0),
                 ..Default::default()
             },
@@ -158,7 +164,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(0.0, -bounds.y / 2.0, 0.0),
+                translation: Vec3::new(0.0, -bounds.y / 2.0, SPRITE_Z),
                 scale: Vec3::new(bounds.x + wall_thickness, wall_thickness, 1.0),
                 ..Default::default()
             },
@@ -173,7 +179,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(0.0, bounds.y / 2.0, 0.0),
+                translation: Vec3::new(0.0, bounds.y / 2.0, SPRITE_Z),
                 scale: Vec3::new(bounds.x + wall_thickness, wall_thickness, 1.0),
                 ..Default::default()
             },
@@ -200,7 +206,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             let brick_position = Vec3::new(
                 column as f32 * (brick_size.x + brick_spacing),
                 y_position,
-                0.0,
+                SPRITE_Z,
             ) + bricks_offset;
             // brick
             commands
