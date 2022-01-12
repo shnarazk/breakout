@@ -33,11 +33,20 @@ fn main() {
 #[derive(Component)]
 struct Paddle {
     speed: f32,
+    just_bounced: Option<f32>,
 }
 
 #[derive(Component)]
 struct Ball {
     velocity: Vec3,
+    rotation: Quat,
+    just_bounced: Option<f32>,
+}
+
+#[derive(Component)]
+struct Brick {
+    velocity: Option<Vec3>,
+    just_bounced: Option<f32>,
 }
 
 #[derive(Component)]
@@ -71,7 +80,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             },
             ..Default::default()
         })
-        .insert(Paddle { speed: 500.0 })
+        .insert(Paddle { speed: 500.0, just_bounced: None })
         .insert(Collider::Paddle);
     // ball
     commands
@@ -89,6 +98,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .insert(Ball {
             velocity: 400.0 * Vec3::new(0.5, -0.5, 0.0).normalize(),
+            rotation: Quat::from_rotation_y(0.4),
+            just_bounced: None,
         });
     // scoreboard
     commands.spawn_bundle(TextBundle {

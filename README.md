@@ -1,4 +1,4 @@
-# juicy breakout in Rust with Bevy
+# A juicy breakout in Rust with Bevy
 
 ## Objective
 
@@ -21,4 +21,4 @@ Let's make [the official example](https://github.com/bevyengine/bevy/blob/458cb7
 
 ### References
 
-- [Juice it or lose it - a talk by Martin Jonasson & Petri Purho](https://www.youtube.com/watch?v=Fy0aCDmgnxg)
+- [Juice it or lose it - a talk by Martin Jonasson & Petri Purho](https://www.youtube.com/watch?v=Fy0aCDmgnxg)(YouTube)
