@@ -43,7 +43,7 @@ struct Ball {
     just_bounced: Option<f32>,
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 struct Brick {
     velocity: Option<Vec3>,
     just_bounced: Option<f32>,
@@ -233,7 +233,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     },
                     ..Default::default()
                 })
-                .insert(Collider::Scorable);
+                // .insert(Collider::Scorable)
+                .insert(Brick { just_bounced: None, ..Default::default() });
         }
     }
 }
@@ -273,6 +274,7 @@ fn ball_collision_system(
     mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
     mut ball_query: Query<(&mut Ball, &Transform)>,
+    mut brick_query: Query<(&mut Brick, &Transform)>,
     collider_query: Query<(Entity, &Collider, &Transform)>,
 ) {
     let (mut ball, ball_transform) = ball_query.single_mut();
@@ -321,6 +323,43 @@ fn ball_collision_system(
             // also in collision
             if let Collider::Solid = *collider {
                 break;
+            }
+        }
+    }
+    // check collision with brick
+    for (mut brick, transform) in brick_query.iter_mut() {
+        let collision = collide(
+            ball_transform.translation,
+            ball_size,
+            transform.translation,
+            transform.scale.truncate(),
+        );
+        if let Some(collision) = collision {
+            scoreboard.score += 1;
+            // commands.entity(collider_entity).despawn();
+            brick.just_bounced = Some(1.0);
+
+            // reflect the ball when it collides
+            let mut reflect_x = false;
+            let mut reflect_y = false;
+
+            // only reflect if the ball's velocity is going in the opposite direction of the
+            // collision
+            match collision {
+                Collision::Left => reflect_x = velocity.x > 0.0,
+                Collision::Right => reflect_x = velocity.x < 0.0,
+                Collision::Top => reflect_y = velocity.y < 0.0,
+                Collision::Bottom => reflect_y = velocity.y > 0.0,
+            }
+
+            // reflect velocity on the x-axis if we hit something on the x-axis
+            if reflect_x {
+                velocity.x = -velocity.x;
+            }
+
+            // reflect velocity on the y-axis if we hit something on the y-axis
+            if reflect_y {
+                velocity.y = -velocity.y;
             }
         }
     }
