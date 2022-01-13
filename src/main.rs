@@ -10,6 +10,7 @@ use {
 /// An implementation of the classic game "Breakout"
 const TIME_STEP: f32 = 1.0 / 60.0;
 const SPRITE_Z: f32 = 1.0;
+const BALL_SIZE: f32 = 20.0;
 
 fn main() {
     App::new()
@@ -90,7 +91,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                scale: Vec3::new(30.0, 30.0, 0.0),
+                scale: Vec3::new(BALL_SIZE, BALL_SIZE, 0.0),
                 translation: Vec3::new(0.0, -50.0, SPRITE_Z),
                 ..Default::default()
             },
@@ -142,8 +143,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // Add walls
     let wall_color = Color::rgb(0.8, 0.8, 0.8);
-    let wall_thickness = 10.0;
-    let bounds = Vec2::new(900.0, 600.0);
+    let wall_thickness = 30.0;
+    let bounds = Vec2::new(960.0, 680.0);
 
     // left
     commands
@@ -269,10 +270,22 @@ fn paddle_movement_system(
 
 fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
     let (mut ball, mut transform) = ball_query.single_mut();
-    transform.translation += ball.velocity * TIME_STEP;
+    let vel = ball.velocity * TIME_STEP;
+    transform.translation += vel;
     // transform.rotation = transform.rotation.add(Quat::from_rotation_x(0.01));
     ball.rotation += TIME_STEP;
     transform.rotation = Quat::from_rotation_z(ball.rotation);
+    if let Some(ref mut t) = ball.just_bounced {
+        // double speed
+        transform.translation += 0.3 * vel;
+        const SCALE: f32 = 0.95;
+        transform.scale = Vec3::new(BALL_SIZE * (1.0 + *t), BALL_SIZE * (1.0 + *t), 0.0);
+        if 1.0 - SCALE < *t {
+            *t *= SCALE;
+        } else {
+            ball.just_bounced = None;
+        }
+    }
 }
 
 fn scoreboard_system(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
@@ -307,6 +320,7 @@ fn ball_collision_system(
     let (mut ball, ball_transform) = ball_query.single_mut();
     let ball_size = ball_transform.scale.truncate();
     let velocity = &mut ball.velocity;
+    let mut collided = false;
 
     // check collision with walls
     for (collider_entity, collider, transform) in collider_query.iter() {
@@ -317,6 +331,7 @@ fn ball_collision_system(
             transform.scale.truncate(),
         );
         if let Some(collision) = collision {
+            collided = true;
             // scorable colliders should be despawned and increment the scoreboard on collision
             if let Collider::Scorable = *collider {
                 scoreboard.score += 1;
@@ -362,6 +377,7 @@ fn ball_collision_system(
             transform.scale.truncate(),
         );
         if let Some(collision) = collision {
+            collided = true;
             scoreboard.score += 1;
             // commands.entity(collider_entity).despawn();
             brick.just_bounced = Some(1.0);
@@ -389,5 +405,8 @@ fn ball_collision_system(
                 velocity.y = -velocity.y;
             }
         }
+    }
+    if collided {
+        ball.just_bounced = Some(1.0);
     }
 }

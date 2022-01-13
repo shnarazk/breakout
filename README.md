@@ -9,8 +9,8 @@ Let's make [the official example](https://github.com/bevyengine/bevy/blob/458cb7
 - [x] animated background
 - [ ] ease in/out
 - [x] rotating ball
-- [ ] scaling ball
-- [ ] accelerating ball
+- [x] scaling ball
+- [x] accelerating ball
 - [ ] trailing ball
 - [ ] wobble bricks
 - [ ] sound effects
