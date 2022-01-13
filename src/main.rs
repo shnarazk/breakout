@@ -1,15 +1,15 @@
 use {
     bevy::{
-    core::FixedTimestep,
-    prelude::*,
-    sprite::collide_aabb::{collide, Collision},
+        core::FixedTimestep,
+        prelude::*,
+        sprite::collide_aabb::{collide, Collision},
     },
     breakout::background::ColoredMesh2dPlugin,
 };
 
 /// An implementation of the classic game "Breakout"
 const TIME_STEP: f32 = 1.0 / 60.0;
-const SPRITE_Z: f32 = 1.0; 
+const SPRITE_Z: f32 = 1.0;
 
 fn main() {
     App::new()
@@ -23,7 +23,8 @@ fn main() {
                 .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
                 .with_system(paddle_movement_system)
                 .with_system(ball_collision_system)
-                .with_system(ball_movement_system),
+                .with_system(ball_movement_system)
+                .with_system(brick_movement_system),
         )
         .add_system(scoreboard_system)
         .add_system(bevy::input::system::exit_on_esc_system)
@@ -80,7 +81,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             },
             ..Default::default()
         })
-        .insert(Paddle { speed: 500.0, just_bounced: None })
+        .insert(Paddle {
+            speed: 500.0,
+            just_bounced: None,
+        })
         .insert(Collider::Paddle);
     // ball
     commands
@@ -234,7 +238,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..Default::default()
                 })
                 // .insert(Collider::Scorable)
-                .insert(Brick { just_bounced: None, ..Default::default() });
+                .insert(Brick {
+                    just_bounced: None,
+                    ..Default::default()
+                });
         }
     }
 }
@@ -268,6 +275,23 @@ fn ball_movement_system(mut ball_query: Query<(&Ball, &mut Transform)>) {
 fn scoreboard_system(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
     let mut text = query.single_mut();
     text.sections[1].value = format!("{}", scoreboard.score);
+}
+
+fn brick_movement_system(
+    mut commands: Commands,
+    mut bricks: Query<(Entity, &mut Brick, &mut Transform)>,
+) {
+    const SCALE: f32 = 0.98;
+    for (entity, mut brick, mut trans) in bricks.iter_mut() {
+        if let Some(ref mut t) = &mut brick.just_bounced {
+            if 1.0 - SCALE < *t {
+                *t *= SCALE;
+                trans.scale *= SCALE;
+            } else {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
 }
 
 fn ball_collision_system(

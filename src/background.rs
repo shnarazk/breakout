@@ -22,10 +22,7 @@ use bevy::{
     },
 };
 
-pub fn setup_background(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
+pub fn setup_background(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let mut rect = Mesh::new(PrimitiveTopology::TriangleList);
     let v_pos: Vec<[f32; 3]> = vec![
         [-1.0, -1.0, 0.0],
