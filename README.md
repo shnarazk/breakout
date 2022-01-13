@@ -8,7 +8,7 @@ Let's make [the official example](https://github.com/bevyengine/bevy/blob/458cb7
 
 - [x] animated background
 - [ ] ease in/out
-- [ ] rotating ball
+- [x] rotating ball
 - [ ] scaling ball
 - [ ] accelerating ball
 - [ ] trailing ball
