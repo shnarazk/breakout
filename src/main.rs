@@ -40,7 +40,7 @@ struct Paddle {
 #[derive(Component)]
 struct Ball {
     velocity: Vec3,
-    rotation: Quat,
+    rotation: f32,
     just_bounced: Option<f32>,
 }
 
@@ -102,7 +102,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .insert(Ball {
             velocity: 400.0 * Vec3::new(0.5, -0.5, 0.0).normalize(),
-            rotation: Quat::from_rotation_y(0.4),
+            rotation: 0.0,
             just_bounced: None,
         });
     // scoreboard
@@ -267,9 +267,12 @@ fn paddle_movement_system(
     translation.x = translation.x.min(380.0).max(-380.0);
 }
 
-fn ball_movement_system(mut ball_query: Query<(&Ball, &mut Transform)>) {
-    let (ball, mut transform) = ball_query.single_mut();
+fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
+    let (mut ball, mut transform) = ball_query.single_mut();
     transform.translation += ball.velocity * TIME_STEP;
+    // transform.rotation = transform.rotation.add(Quat::from_rotation_x(0.01));
+    ball.rotation += TIME_STEP;
+    transform.rotation = Quat::from_rotation_z(ball.rotation);
 }
 
 fn scoreboard_system(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
