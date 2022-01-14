@@ -34,8 +34,14 @@ fn main() {
 
 #[derive(Component)]
 struct Paddle {
+    eye_sprite: Handle<Sprite>,
     speed: f32,
     just_bounced: Option<f32>,
+}
+
+#[derive(Component)]
+struct PaddleEye {
+    is_left: bool,
 }
 
 #[derive(Component)]
@@ -83,10 +89,24 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..Default::default()
         })
         .insert(Paddle {
+            eye_sprite: asset_server.load("sprites/eye.png"),
             speed: 500.0,
             just_bounced: None,
         })
         .insert(Collider::Paddle);
+    // paddle left eye
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(0.0, -215.0, SPRITE_Z),
+                scale: Vec3::new(0.25, 0.25, 0.0),
+                ..Default::default()
+            },
+            texture: asset_server.load("sprites/eye.png"),
+            ..Default::default()
+        })
+        .insert(PaddleEye { is_left: true });
+
     // ball
     commands
         .spawn_bundle(SpriteBundle {
@@ -96,7 +116,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..Default::default()
             },
             sprite: Sprite {
-                color: Color::rgb(1.0, 0.5, 0.5),
+                color: Color::rgb(0.2, 0.3, 1.0),
                 ..Default::default()
             },
             ..Default::default()
@@ -273,7 +293,7 @@ fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
     let vel = ball.velocity * TIME_STEP;
     transform.translation += vel;
     // transform.rotation = transform.rotation.add(Quat::from_rotation_x(0.01));
-    ball.rotation += TIME_STEP;
+    ball.rotation += 8.0 * TIME_STEP;
     transform.rotation = Quat::from_rotation_z(ball.rotation);
     if let Some(ref mut t) = ball.just_bounced {
         // double speed
@@ -297,7 +317,7 @@ fn brick_movement_system(
     mut commands: Commands,
     mut bricks: Query<(Entity, &mut Brick, &mut Transform)>,
 ) {
-    const SCALE: f32 = 0.98;
+    const SCALE: f32 = 0.95;
     for (entity, mut brick, mut trans) in bricks.iter_mut() {
         if let Some(ref mut t) = &mut brick.just_bounced {
             if 1.0 - SCALE < *t {
