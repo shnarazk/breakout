@@ -306,6 +306,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn paddle_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut queries: QuerySet<(
@@ -313,8 +314,8 @@ fn paddle_movement_system(
         QueryState<(&mut PaddleEye, &mut Transform)>,
     )>,
 ) {
-    let mut just_bounced: Option<f32> = None;
-    let mut p_pos: f32 = 0.0;
+    let just_bounced: Option<f32>;
+    let p_pos: f32;
     let mut paddle = queries.q0();
     let (mut paddle, mut transform) = paddle.single_mut();
     let mut direction = 0.0;
@@ -343,7 +344,7 @@ fn paddle_movement_system(
 
     // move eyes
     let mut eyes = queries.q1();
-    for (mut eye, mut trans) in eyes.iter_mut() {
+    for (eye, mut trans) in eyes.iter_mut() {
         if eye.is_left {
             trans.translation.x = p_pos - EYE_DIST;
         } else {
@@ -406,7 +407,7 @@ fn brick_movement_system(
 fn ball_collision_system(
     mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
-    mut paddle_query: Query<(&mut Paddle, &Transform)>,
+    mut paddle_query: Query<&mut Paddle>,
     mut ball_query: Query<(&mut Ball, &Transform)>,
     mut brick_query: Query<(&mut Brick, &Transform)>,
     collider_query: Query<(Entity, &Collider, &Transform)>,
@@ -509,7 +510,7 @@ fn ball_collision_system(
     }
     // check collision with paddle
     if collided_with_paddle {
-        for (mut paddle, transform) in paddle_query.iter_mut() {
+        for mut paddle in paddle_query.iter_mut() {
             paddle.just_bounced = Some(1.0);
         }
     }
