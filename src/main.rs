@@ -11,6 +11,7 @@ use {
 const TIME_STEP: f32 = 1.0 / 60.0;
 const SPRITE_Z: f32 = 1.0;
 const BALL_SIZE: f32 = 20.0;
+const EYE_DIST: f32 = 30.0;
 
 fn main() {
     App::new()
@@ -98,7 +99,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(-10.0, -215.0, SPRITE_Z + 0.1),
+                translation: Vec3::new(-EYE_DIST, -215.0, SPRITE_Z + 0.1),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -111,7 +112,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(-10.0, -215.0, SPRITE_Z + 0.2),
+                translation: Vec3::new(-EYE_DIST, -215.0, SPRITE_Z + 0.2),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -124,7 +125,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(10.0, -215.0, SPRITE_Z),
+                translation: Vec3::new(EYE_DIST, -215.0, SPRITE_Z),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -137,7 +138,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(10.0, -215.0, SPRITE_Z + 0.2),
+                translation: Vec3::new(EYE_DIST, -215.0, SPRITE_Z + 0.2),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -308,12 +309,14 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn paddle_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut queries: QuerySet<(
-        QueryState<(&Paddle, &mut Transform)>,
-        QueryState<(&PaddleEye, &mut Transform)>,
-)>) {
+        QueryState<(&mut Paddle, &mut Transform)>,
+        QueryState<(&mut PaddleEye, &mut Transform)>,
+    )>,
+) {
+    let mut just_bounced: Option<f32> = None;
     let mut p_pos: f32 = 0.0;
     let mut paddle = queries.q0();
-    let (paddle, mut transform) = paddle.single_mut();
+    let (mut paddle, mut transform) = paddle.single_mut();
     let mut direction = 0.0;
     if keyboard_input.pressed(KeyCode::Left) {
         direction -= 1.0;
@@ -329,14 +332,31 @@ fn paddle_movement_system(
     p_pos = translation.x;
     // bound the paddle within the walls
     translation.x = translation.x.min(380.0).max(-380.0);
+    just_bounced = paddle.just_bounced;
+    if let Some(ref mut t) = paddle.just_bounced {
+        if 0.1 < *t {
+            *t *= 0.8;
+        } else {
+            paddle.just_bounced = None;
+        }
+    }
 
     // move eyes
     let mut eyes = queries.q1();
-    for (eye, mut trans) in eyes.iter_mut() {
+    for (mut eye, mut trans) in eyes.iter_mut() {
         if eye.is_left {
-            trans.translation.x = p_pos - 10.0;
+            trans.translation.x = p_pos - EYE_DIST;
         } else {
-            trans.translation.x = p_pos + 10.0;
+            trans.translation.x = p_pos + EYE_DIST;
+        }
+        if let Some(ref t) = just_bounced {
+            if 0.1 < *t {
+                trans.scale.x = 0.25 + 0.5 * *t;
+                trans.scale.y = 0.25 + 0.5 * *t;
+            } else {
+                trans.scale.x = 0.25;
+                trans.scale.y = 0.25;
+            }
         }
     }
 }
@@ -386,6 +406,7 @@ fn brick_movement_system(
 fn ball_collision_system(
     mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
+    mut paddle_query: Query<(&mut Paddle, &Transform)>,
     mut ball_query: Query<(&mut Ball, &Transform)>,
     mut brick_query: Query<(&mut Brick, &Transform)>,
     collider_query: Query<(Entity, &Collider, &Transform)>,
@@ -394,6 +415,7 @@ fn ball_collision_system(
     let ball_size = ball_transform.scale.truncate();
     let velocity = &mut ball.velocity;
     let mut collided = false;
+    let mut collided_with_paddle = false;
 
     // check collision with walls
     for (collider_entity, collider, transform) in collider_query.iter() {
@@ -434,6 +456,9 @@ fn ball_collision_system(
                 velocity.y = -velocity.y;
             }
 
+            if let Collider::Paddle = *collider {
+                collided_with_paddle = true;
+            }
             // break if this collide is on a solid, otherwise continue check whether a solid is
             // also in collision
             if let Collider::Solid = *collider {
@@ -481,5 +506,11 @@ fn ball_collision_system(
     }
     if collided {
         ball.just_bounced = Some(1.0);
+    }
+    // check collision with paddle
+    if collided_with_paddle {
+        for (mut paddle, transform) in paddle_query.iter_mut() {
+            paddle.just_bounced = Some(1.0);
+        }
     }
 }
