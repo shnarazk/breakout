@@ -98,7 +98,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(0.0, -215.0, SPRITE_Z),
+                translation: Vec3::new(-10.0, -215.0, SPRITE_Z + 0.1),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -107,6 +107,44 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .insert(PaddleEye { is_left: true });
 
+    // paddle left black eye
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(-10.0, -215.0, SPRITE_Z + 0.2),
+                scale: Vec3::new(0.25, 0.25, 0.0),
+                ..Default::default()
+            },
+            texture: asset_server.load("sprites/black-eye.png"),
+            ..Default::default()
+        })
+        .insert(PaddleEye { is_left: true });
+
+    // paddle right eye
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(10.0, -215.0, SPRITE_Z),
+                scale: Vec3::new(0.25, 0.25, 0.0),
+                ..Default::default()
+            },
+            texture: asset_server.load("sprites/eye.png"),
+            ..Default::default()
+        })
+        .insert(PaddleEye { is_left: false });
+
+    // paddle right black eye
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(10.0, -215.0, SPRITE_Z + 0.2),
+                scale: Vec3::new(0.25, 0.25, 0.0),
+                ..Default::default()
+            },
+            texture: asset_server.load("sprites/black-eye.png"),
+            ..Default::default()
+        })
+        .insert(PaddleEye { is_left: false });
     // ball
     commands
         .spawn_bundle(SpriteBundle {
@@ -269,9 +307,13 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn paddle_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Paddle, &mut Transform)>,
-) {
-    let (paddle, mut transform) = query.single_mut();
+    mut queries: QuerySet<(
+        QueryState<(&Paddle, &mut Transform)>,
+        QueryState<(&PaddleEye, &mut Transform)>,
+)>) {
+    let mut p_pos: f32 = 0.0;
+    let mut paddle = queries.q0();
+    let (paddle, mut transform) = paddle.single_mut();
     let mut direction = 0.0;
     if keyboard_input.pressed(KeyCode::Left) {
         direction -= 1.0;
@@ -284,8 +326,19 @@ fn paddle_movement_system(
     let translation = &mut transform.translation;
     // move the paddle horizontally
     translation.x += direction * paddle.speed * TIME_STEP;
+    p_pos = translation.x;
     // bound the paddle within the walls
     translation.x = translation.x.min(380.0).max(-380.0);
+
+    // move eyes
+    let mut eyes = queries.q1();
+    for (eye, mut trans) in eyes.iter_mut() {
+        if eye.is_left {
+            trans.translation.x = p_pos - 10.0;
+        } else {
+            trans.translation.x = p_pos + 10.0;
+        }
+    }
 }
 
 fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
