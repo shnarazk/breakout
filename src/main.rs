@@ -61,7 +61,6 @@ struct Brick {
 #[derive(Component)]
 enum Collider {
     Solid,
-    Scorable,
     Paddle,
 }
 
@@ -398,6 +397,7 @@ fn brick_movement_system(
                 *t *= SCALE;
                 trans.scale *= SCALE;
             } else {
+                // scorable colliders should be despawned and increment the scoreboard on collision
                 commands.entity(entity).despawn();
             }
         }
@@ -405,21 +405,21 @@ fn brick_movement_system(
 }
 
 fn ball_collision_system(
-    mut commands: Commands,
     mut scoreboard: ResMut<Scoreboard>,
     mut paddle_query: Query<&mut Paddle>,
     mut ball_query: Query<(&mut Ball, &Transform)>,
     mut brick_query: Query<(&mut Brick, &Transform)>,
-    collider_query: Query<(Entity, &Collider, &Transform)>,
+    collider_query: Query<(&Collider, &Transform)>,
 ) {
     let (mut ball, ball_transform) = ball_query.single_mut();
     let ball_size = ball_transform.scale.truncate();
     let velocity = &mut ball.velocity;
+    let mut penalty = 0;
     let mut collided = false;
     let mut collided_with_paddle = false;
 
     // check collision with walls
-    for (collider_entity, collider, transform) in collider_query.iter() {
+    for (collider, transform) in collider_query.iter() {
         let collision = collide(
             ball_transform.translation,
             ball_size,
@@ -428,11 +428,6 @@ fn ball_collision_system(
         );
         if let Some(collision) = collision {
             collided = true;
-            // scorable colliders should be despawned and increment the scoreboard on collision
-            if let Collider::Scorable = *collider {
-                scoreboard.score += 1;
-                commands.entity(collider_entity).despawn();
-            }
 
             // reflect the ball when it collides
             let mut reflect_x = false;
@@ -458,14 +453,30 @@ fn ball_collision_system(
             }
 
             if let Collider::Paddle = *collider {
+                if matches!(collision, Collision::Bottom) {
+                    penalty = 2;
+                }
                 collided_with_paddle = true;
             }
+
             // break if this collide is on a solid, otherwise continue check whether a solid is
             // also in collision
             if let Collider::Solid = *collider {
+                if matches!(collision, Collision::Top) && reflect_y {
+                    penalty = penalty.max(1);
+                }
                 break;
             }
         }
+    }
+    match penalty {
+        2 => {
+            scoreboard.score /= 2;
+        }
+        1 => {
+            scoreboard.score = scoreboard.score.saturating_sub(1);
+        }
+        _ => (),
     }
     // check collision with brick
     for (mut brick, transform) in brick_query.iter_mut() {
