@@ -35,7 +35,6 @@ fn main() {
 
 #[derive(Component)]
 struct Paddle {
-    eye_sprite: Handle<Sprite>,
     speed: f32,
     just_bounced: Option<f32>,
 }
@@ -89,7 +88,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..Default::default()
         })
         .insert(Paddle {
-            eye_sprite: asset_server.load("sprites/eye.png"),
             speed: 500.0,
             just_bounced: None,
         })
@@ -390,12 +388,16 @@ fn brick_movement_system(
     mut commands: Commands,
     mut bricks: Query<(Entity, &mut Brick, &mut Transform)>,
 ) {
-    const SCALE: f32 = 0.95;
+    const SCALE: f32 = 0.94;
     for (entity, mut brick, mut trans) in bricks.iter_mut() {
+        let velocity = brick.velocity;
         if let Some(ref mut t) = &mut brick.just_bounced {
             if 1.0 - SCALE < *t {
                 *t *= SCALE;
-                trans.scale *= SCALE;
+                if let Some(v) = velocity {
+                    trans.translation += *t * 0.6 * TIME_STEP * v;
+                }
+                trans.scale *= 0.99; // SCALE;
             } else {
                 // scorable colliders should be despawned and increment the scoreboard on collision
                 commands.entity(entity).despawn();
@@ -490,7 +492,10 @@ fn ball_collision_system(
             collided = true;
             scoreboard.score += 1;
             // commands.entity(collider_entity).despawn();
-            brick.just_bounced = Some(1.0);
+            if brick.just_bounced.is_none() {
+                brick.velocity = Some(*velocity);
+                brick.just_bounced = Some(1.0);
+            }
 
             // reflect the ball when it collides
             let mut reflect_x = false;
