@@ -5,6 +5,7 @@ use {
         sprite::collide_aabb::{collide, Collision},
     },
     breakout::background::ColoredMesh2dPlugin,
+    rand::prelude::random,
 };
 
 /// An implementation of the classic game "Breakout"
@@ -401,6 +402,7 @@ fn brick_movement_system(
                 if let Some(v) = velocity {
                     trans.translation += *t * 0.6 * TIME_STEP * v;
                 }
+                trans.rotation = Quat::from_rotation_z(0.4 * random::<f32>());
                 trans.scale *= 0.99; // SCALE;
             } else {
                 // scorable colliders should be despawned and increment the scoreboard on collision

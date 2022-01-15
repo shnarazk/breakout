@@ -14,7 +14,7 @@ Let's make [the official example](https://github.com/bevyengine/bevy/blob/458cb7
 - [x] scaling ball
 - [x] accelerating ball
 - [ ] trailing ball
-- [ ] wobble bricks
+- [x] wobble bricks
 - [ ] sound effects
 - [ ] background music
 - [ ] particles
