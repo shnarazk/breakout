@@ -20,7 +20,8 @@ fn main() {
         .insert_resource(Scoreboard {
             score: 0,
             remain_bricks: 20,
-            brick_in_row: 0,
+            brick_in_row: 1,
+            keeping: false,
         })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         .add_plugin(ColoredMesh2dPlugin)
@@ -82,6 +83,7 @@ struct Scoreboard {
     score: usize,
     remain_bricks: usize,
     brick_in_row: usize,
+    keeping: bool,
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -94,7 +96,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(0.0, -215.0, SPRITE_Z),
+                translation: Vec3::new(0.0, -230.0, SPRITE_Z),
                 scale: Vec3::new(120.0, 30.0, 0.0),
                 ..Default::default()
             },
@@ -113,7 +115,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(-EYE_DIST, -215.0, SPRITE_Z + 0.1),
+                translation: Vec3::new(-EYE_DIST, -230.0, SPRITE_Z + 0.1),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -126,7 +128,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(-EYE_DIST, -215.0, SPRITE_Z + 0.2),
+                translation: Vec3::new(-EYE_DIST, -230.0, SPRITE_Z + 0.2),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -139,7 +141,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(EYE_DIST, -215.0, SPRITE_Z),
+                translation: Vec3::new(EYE_DIST, -230.0, SPRITE_Z),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -152,7 +154,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(EYE_DIST, -215.0, SPRITE_Z + 0.2),
+                translation: Vec3::new(EYE_DIST, -230.0, SPRITE_Z + 0.2),
                 scale: Vec3::new(0.25, 0.25, 0.0),
                 ..Default::default()
             },
@@ -441,6 +443,8 @@ fn bonus_notifier_system(mut query: Query<(&mut Text, &mut Style, &mut TextBonus
         style.display = Display::Flex;
         if 0.1 < *t {
             text.sections[0].value = format!("+{}", point);
+            text.sections[0].style.font_size = 100.0 * (2.0 - *t);
+            text.sections[0].style.color =Color::rgba(1.0, 0.2, 0.0, *t);
             *t *= 0.9;
         } else {
             bonus.show = None;
@@ -498,6 +502,7 @@ fn ball_collision_system(
         );
         if let Some(collision) = collision {
             collided = true;
+            scoreboard.keeping = false;
 
             // reflect the ball when it collides
             let mut reflect_x = false;
@@ -523,16 +528,16 @@ fn ball_collision_system(
             }
 
             if let Collider::Paddle = *collider {
-                scoreboard.brick_in_row = 0;
                 if matches!(collision, Collision::Bottom) {
                     penalty = 2;
                 }
                 collided_with_paddle = true;
             } else if let Collider::Solid = *collider {
-                scoreboard.brick_in_row = 0;
                 // break if this collide is on a solid, otherwise continue check
                 // whether a solid is also in collision
                 if matches!(collision, Collision::Top) && reflect_y {
+                    scoreboard.brick_in_row = 1;
+                    scoreboard.keeping = false;
                     penalty = penalty.max(1);
                 }
                 break;
@@ -563,14 +568,17 @@ fn ball_collision_system(
             }
             collided = true;
             if 0 < scoreboard.remain_bricks {
-                scoreboard.brick_in_row += 1;
+                if scoreboard.keeping  {
+                    scoreboard.brick_in_row += 1;
+                    if 1 < scoreboard.brick_in_row {
+                        let mut bonus = bonus_query.single_mut();
+                        bonus.row = scoreboard.brick_in_row;
+                        bonus.show = Some(0.5);
+                    }
+                }
+                scoreboard.keeping = true;
                 scoreboard.score += scoreboard.brick_in_row;
                 scoreboard.remain_bricks -= 1;
-            }
-            if 1 < scoreboard.brick_in_row {
-                let mut bonus = bonus_query.single_mut();
-                bonus.row = scoreboard.brick_in_row;
-                bonus.show = Some(0.5);
             }
             // commands.entity(collider_entity).despawn();
             if brick.just_bounced.is_none() {
