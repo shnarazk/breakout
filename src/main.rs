@@ -16,7 +16,10 @@ const EYE_DIST: f32 = 30.0;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .insert_resource(Scoreboard { score: 0 })
+        .insert_resource(Scoreboard {
+            score: 0,
+            remain_bricks: 20,
+        })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         .add_plugin(ColoredMesh2dPlugin)
         .add_startup_system(setup)
@@ -65,6 +68,7 @@ enum Collider {
 
 struct Scoreboard {
     score: usize,
+    remain_bricks: usize,
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -472,6 +476,7 @@ fn ball_collision_system(
         }
     }
     match penalty {
+        _ if 0 == scoreboard.remain_bricks => (),
         2 => {
             scoreboard.score /= 2;
         }
@@ -489,8 +494,14 @@ fn ball_collision_system(
             transform.scale.truncate(),
         );
         if let Some(collision) = collision {
+            if brick.just_bounced.is_some() {
+                continue;
+            }
             collided = true;
-            scoreboard.score += 1;
+            if 0 < scoreboard.remain_bricks {
+                scoreboard.score += 1;
+                scoreboard.remain_bricks -= 1;
+            }
             // commands.entity(collider_entity).despawn();
             if brick.just_bounced.is_none() {
                 brick.velocity = Some(*velocity);
