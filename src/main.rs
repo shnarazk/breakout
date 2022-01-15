@@ -20,6 +20,7 @@ fn main() {
         .insert_resource(Scoreboard {
             score: 0,
             remain_bricks: 20,
+            brick_in_row: 0,
         })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         .add_plugin(ColoredMesh2dPlugin)
@@ -61,7 +62,7 @@ struct Brick {
     just_bounced: Option<f32>,
 }
 
-#[derive(Component)]
+#[derive(Component, Eq, PartialEq)]
 enum Collider {
     Solid,
     Paddle,
@@ -70,6 +71,7 @@ enum Collider {
 struct Scoreboard {
     score: usize,
     remain_bricks: usize,
+    brick_in_row: usize,
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -461,15 +463,15 @@ fn ball_collision_system(
             }
 
             if let Collider::Paddle = *collider {
+                scoreboard.brick_in_row = 0;
                 if matches!(collision, Collision::Bottom) {
                     penalty = 2;
                 }
                 collided_with_paddle = true;
-            }
-
-            // break if this collide is on a solid, otherwise continue check whether a solid is
-            // also in collision
-            if let Collider::Solid = *collider {
+            } else if let Collider::Solid = *collider {
+                scoreboard.brick_in_row = 0;
+                // break if this collide is on a solid, otherwise continue check
+                // whether a solid is also in collision
                 if matches!(collision, Collision::Top) && reflect_y {
                     penalty = penalty.max(1);
                 }
@@ -501,7 +503,8 @@ fn ball_collision_system(
             }
             collided = true;
             if 0 < scoreboard.remain_bricks {
-                scoreboard.score += 1;
+                scoreboard.brick_in_row += 1;
+                scoreboard.score += scoreboard.brick_in_row;
                 scoreboard.remain_bricks -= 1;
             }
             // commands.entity(collider_entity).despawn();
