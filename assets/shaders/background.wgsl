@@ -61,10 +61,11 @@ struct FragmentInput {
 
 [[stage(fragment)]]
 fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
-    let speed = 0.57;
+    let speed_1 = 0.57;
+    let speed_2 = 0.5;
     let time_since_startup = time.time_since_startup;
-    let t_1 = sin(time_since_startup * speed) * 0.5 + 0.5;
-    let t_2 = cos(time_since_startup * speed);
+    let t_1 = sin(time_since_startup * speed_1) * 0.5 + 0.5;
+    let t_2 = cos(time_since_startup * speed_2);
 
     let pos = vec2<f32>(in.position.x, in.position.y);
     let distance_to_center = distance(pos, vec2<f32>(t_2, t_1)) * 1.2;
