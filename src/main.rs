@@ -34,6 +34,7 @@ fn main() {
                 .with_system(brick_movement_system),
         )
         .add_system(scoreboard_system)
+        .add_system(bonus_notifier_system)
         .add_system(bevy::input::system::exit_on_esc_system)
         .run();
 }
@@ -66,6 +67,15 @@ struct Brick {
 enum Collider {
     Solid,
     Paddle,
+}
+
+#[derive(Component)]
+struct TextScoreBoard;
+
+#[derive(Component, Default)]
+struct TextBonus {
+    show: Option<f32>,
+    row: usize,
 }
 
 struct Scoreboard {
@@ -170,39 +180,69 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             just_bounced: None,
         });
     // scoreboard
-    commands.spawn_bundle(TextBundle {
-        text: Text {
-            sections: vec![
-                TextSection {
-                    value: "Score: ".to_string(),
-                    style: TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 40.0,
-                        color: Color::rgb(0.5, 0.5, 1.0),
+    commands
+        .spawn_bundle(TextBundle {
+            text: Text {
+                sections: vec![
+                    TextSection {
+                        value: "Score: ".to_string(),
+                        style: TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::rgb(0.5, 0.5, 1.0),
+                        },
                     },
-                },
-                TextSection {
-                    value: "".to_string(),
-                    style: TextStyle {
-                        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
-                        font_size: 40.0,
-                        color: Color::rgb(1.0, 0.5, 0.5),
+                    TextSection {
+                        value: "".to_string(),
+                        style: TextStyle {
+                            font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                            font_size: 40.0,
+                            color: Color::rgb(1.0, 0.5, 0.5),
+                        },
                     },
+                ],
+                ..Default::default()
+            },
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: Rect {
+                    top: Val::Px(5.0),
+                    left: Val::Px(5.0),
+                    ..Default::default()
                 },
-            ],
-            ..Default::default()
-        },
-        style: Style {
-            position_type: PositionType::Absolute,
-            position: Rect {
-                top: Val::Px(5.0),
-                left: Val::Px(5.0),
                 ..Default::default()
             },
             ..Default::default()
-        },
-        ..Default::default()
-    });
+        })
+        .insert(TextScoreBoard);
+
+    // bonus notifier
+    commands
+        .spawn_bundle(TextBundle {
+            text: Text::with_section(
+                "+1".to_string(),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 100.0,
+                    color: Color::rgba(1.0, 0.2, 0.0, 0.8),
+                },
+                TextAlignment {
+                    horizontal: HorizontalAlign::Center,
+                    ..Default::default()
+                },
+            ),
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: Rect {
+                    top: Val::Percent(50.0),
+                    left: Val::Percent(45.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .insert(TextBonus::default());
 
     // Add walls
     let wall_color = Color::rgb(0.8, 0.8, 0.8);
@@ -386,9 +426,28 @@ fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
     }
 }
 
-fn scoreboard_system(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
+fn scoreboard_system(
+    scoreboard: Res<Scoreboard>,
+    mut query: Query<&mut Text, With<TextScoreBoard>>,
+) {
     let mut text = query.single_mut();
     text.sections[1].value = format!("{}", scoreboard.score);
+}
+
+fn bonus_notifier_system(mut query: Query<(&mut Text, &mut Style, &mut TextBonus)>) {
+    let (mut text, mut style, mut bonus) = query.single_mut();
+    let point = bonus.row;
+    if let Some(ref mut t) = bonus.show {
+        style.display = Display::Flex;
+        if 0.1 < *t {
+            text.sections[0].value = format!("+{}", point);
+            *t *= 0.9;
+        } else {
+            bonus.show = None;
+        }
+    } else {
+        style.display = Display::None;
+    }
 }
 
 fn brick_movement_system(
@@ -419,6 +478,7 @@ fn ball_collision_system(
     mut paddle_query: Query<&mut Paddle>,
     mut ball_query: Query<(&mut Ball, &Transform)>,
     mut brick_query: Query<(&mut Brick, &Transform)>,
+    mut bonus_query: Query<&mut TextBonus>,
     collider_query: Query<(&Collider, &Transform)>,
 ) {
     let (mut ball, ball_transform) = ball_query.single_mut();
@@ -506,6 +566,11 @@ fn ball_collision_system(
                 scoreboard.brick_in_row += 1;
                 scoreboard.score += scoreboard.brick_in_row;
                 scoreboard.remain_bricks -= 1;
+            }
+            if 1 < scoreboard.brick_in_row {
+                let mut bonus = bonus_query.single_mut();
+                bonus.row = scoreboard.brick_in_row;
+                bonus.show = Some(0.5);
             }
             // commands.entity(collider_entity).despawn();
             if brick.just_bounced.is_none() {
