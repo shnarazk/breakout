@@ -16,6 +16,12 @@ const EYE_DIST: f32 = 30.0;
 
 fn main() {
     App::new()
+        .insert_resource(WindowDescriptor {
+            title: "Breakout+".to_string(),
+            width: 980.0,
+            height: 710.0,
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
         .insert_resource(Scoreboard {
             score: 0,
@@ -250,7 +256,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // Add walls
     let wall_color = Color::rgb(0.8, 0.8, 0.8);
-    let wall_thickness = 30.0;
+    let wall_thickness = 35.0;
     let bounds = Vec2::new(960.0, 680.0);
 
     // left
