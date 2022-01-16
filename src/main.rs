@@ -22,6 +22,7 @@ fn main() {
             remain_bricks: 20,
             brick_in_row: 1,
             keeping: false,
+            just_changed: None,
         })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         .add_plugin(ColoredMesh2dPlugin)
@@ -70,7 +71,7 @@ enum Collider {
     Paddle,
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 struct TextScoreBoard;
 
 #[derive(Component, Default)]
@@ -84,6 +85,7 @@ struct Scoreboard {
     remain_bricks: usize,
     brick_in_row: usize,
     keeping: bool,
+    just_changed: Option<f32>,
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -208,15 +210,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             style: Style {
                 position_type: PositionType::Absolute,
                 position: Rect {
-                    top: Val::Px(5.0),
-                    left: Val::Px(5.0),
+                    top: Val::Percent(60.0),
+                    left: Val::Percent(45.0),
                     ..Default::default()
                 },
                 ..Default::default()
             },
             ..Default::default()
         })
-        .insert(TextScoreBoard);
+        .insert(TextScoreBoard::default());
 
     // bonus notifier
     commands
@@ -236,8 +238,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             style: Style {
                 position_type: PositionType::Absolute,
                 position: Rect {
-                    top: Val::Percent(50.0),
-                    left: Val::Percent(45.0),
+                    top: Val::Percent(35.0),
+                    left: Val::Percent(40.0),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -378,7 +380,7 @@ fn paddle_movement_system(
     translation.x += direction * paddle.speed * TIME_STEP;
     p_pos = translation.x;
     // bound the paddle within the walls
-    translation.x = translation.x.min(380.0).max(-380.0);
+    translation.x = translation.x.clamp(-400.0, 400.0);
     just_bounced = paddle.just_bounced;
     if let Some(ref mut t) = paddle.just_bounced {
         if 0.1 < *t {
@@ -429,22 +431,36 @@ fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
 }
 
 fn scoreboard_system(
-    scoreboard: Res<Scoreboard>,
-    mut query: Query<&mut Text, With<TextScoreBoard>>,
+    mut scoreboard: ResMut<Scoreboard>,
+    mut query: Query<(&mut Text, &mut Style), With<TextScoreBoard>>,
 ) {
-    let mut text = query.single_mut();
-    text.sections[1].value = format!("{}", scoreboard.score);
+    let (mut text, mut style) = query.single_mut();
+    let remains = scoreboard.remain_bricks;
+    let score = scoreboard.score;
+    if let Some(ref mut t) = scoreboard.just_changed {
+        style.display = Display::Flex;
+        if 0.1 < *t {
+            text.sections[1].value = format!("{}", score);
+            if 0 < remains {
+                *t *= 0.9;
+            }
+        } else {
+            scoreboard.just_changed = None;
+        }
+    } else {
+        style.display = Display::None;
+    }
 }
 
-fn bonus_notifier_system(mut query: Query<(&mut Text, &mut Style, &mut TextBonus)>) {
-    let (mut text, mut style, mut bonus) = query.single_mut();
+fn bonus_notifier_system(mut bonus_query: Query<(&mut Text, &mut Style, &mut TextBonus)>) {
+    let (mut text, mut style, mut bonus) = bonus_query.single_mut();
     let point = bonus.row;
     if let Some(ref mut t) = bonus.show {
         style.display = Display::Flex;
         if 0.1 < *t {
             text.sections[0].value = format!("+{}", point);
             text.sections[0].style.font_size = 100.0 * (2.0 - *t);
-            text.sections[0].style.color =Color::rgba(1.0, 0.2, 0.0, *t);
+            text.sections[0].style.color = Color::rgba(1.0, 0.2, 0.0, *t);
             *t *= 0.9;
         } else {
             bonus.show = None;
@@ -491,6 +507,7 @@ fn ball_collision_system(
     let mut penalty = 0;
     let mut collided = false;
     let mut collided_with_paddle = false;
+    let mut score_changed = false;
 
     // check collision with walls
     for (collider, transform) in collider_query.iter() {
@@ -548,9 +565,11 @@ fn ball_collision_system(
         _ if 0 == scoreboard.remain_bricks => (),
         2 => {
             scoreboard.score /= 2;
+            score_changed = true;
         }
-        1 => {
-            scoreboard.score = scoreboard.score.saturating_sub(1);
+        1 if 0 < scoreboard.score => {
+            scoreboard.score -= 1;
+            score_changed = true;
         }
         _ => (),
     }
@@ -568,17 +587,21 @@ fn ball_collision_system(
             }
             collided = true;
             if 0 < scoreboard.remain_bricks {
-                if scoreboard.keeping  {
+                if scoreboard.keeping {
                     scoreboard.brick_in_row += 1;
                     if 1 < scoreboard.brick_in_row {
                         let mut bonus = bonus_query.single_mut();
                         bonus.row = scoreboard.brick_in_row;
-                        bonus.show = Some(0.5);
+                        bonus.show = Some(2.0);
                     }
                 }
                 scoreboard.keeping = true;
                 scoreboard.score += scoreboard.brick_in_row;
                 scoreboard.remain_bricks -= 1;
+                if 0 == scoreboard.remain_bricks {
+                    scoreboard.just_changed = Some(100.0);
+                }
+                score_changed = true;
             }
             // commands.entity(collider_entity).despawn();
             if brick.just_bounced.is_none() {
@@ -618,5 +641,8 @@ fn ball_collision_system(
         for mut paddle in paddle_query.iter_mut() {
             paddle.just_bounced = Some(1.0);
         }
+    }
+    if score_changed && scoreboard.just_changed.is_none() {
+        scoreboard.just_changed = Some(4.0);
     }
 }
