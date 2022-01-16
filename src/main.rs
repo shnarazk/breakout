@@ -542,12 +542,12 @@ fn ball_collision_system(
 
             // reflect velocity on the x-axis if we hit something on the x-axis
             if reflect_x {
-                velocity.x = -velocity.x;
+                velocity.x = -velocity.x + random::<f32>() * 2.0;
             }
 
             // reflect velocity on the y-axis if we hit something on the y-axis
             if reflect_y {
-                velocity.y = -velocity.y;
+                velocity.y = -velocity.y + random::<f32>() * 2.0;
             }
 
             if let Collider::Paddle = *collider {
