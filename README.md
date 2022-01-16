@@ -21,6 +21,14 @@ Let's make [the official example](https://github.com/bevyengine/bevy/blob/458cb7
 - [ ] shaking screen
 - [ ] eyes and mouth
 
+## Run
+
+```
+cargo run --release
+```
+
+Since the executable needs to load the asset files, you can't install with `cargo install` so far.
+
 ### References
 
 - [Juice it or lose it - a talk by Martin Jonasson & Petri Purho](https://www.youtube.com/watch?v=Fy0aCDmgnxg)(YouTube)
