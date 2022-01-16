@@ -466,7 +466,7 @@ fn bonus_notifier_system(mut bonus_query: Query<(&mut Text, &mut Style, &mut Tex
         if 0.1 < *t {
             text.sections[0].value = format!("+{}", point);
             text.sections[0].style.font_size = 100.0 * (2.0 - *t);
-            text.sections[0].style.color = Color::rgba(1.0, 0.2, 0.0, *t);
+            text.sections[0].style.color = Color::rgba(1.0, 0.2, 0.0, t.sqrt());
             *t *= 0.9;
         } else {
             bonus.show = None;
