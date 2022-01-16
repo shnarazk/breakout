@@ -1,6 +1,6 @@
 # A juicy breakout in Rust with Bevy
 
-![](https://user-images.githubusercontent.com/997855/149607230-e5ef84dc-6560-49d4-a1a8-6f44652bff87.gif)
+![](https://user-images.githubusercontent.com/997855/149650058-1021deed-02af-43d3-82ed-1f644659a43c.gif)
 
 ## Objective
 
