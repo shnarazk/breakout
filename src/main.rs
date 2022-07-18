@@ -363,14 +363,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 #[allow(clippy::type_complexity)]
 fn paddle_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut queries: QuerySet<(
-        QueryState<(&mut Paddle, &mut Transform)>,
-        QueryState<(&mut PaddleEye, &mut Transform)>,
+    mut queries: ParamSet<(
+        Query<(&mut Paddle, &mut Transform)>,
+        Query<(&mut PaddleEye, &mut Transform)>,
     )>,
 ) {
-    let just_bounced: Option<f32>;
-    let p_pos: f32;
-    let mut paddle = queries.q0();
+    let mut paddle = queries.p0();
     let (mut paddle, mut transform) = paddle.single_mut();
     let mut direction = 0.0;
     if keyboard_input.pressed(KeyCode::Left) {
@@ -384,10 +382,10 @@ fn paddle_movement_system(
     let translation = &mut transform.translation;
     // move the paddle horizontally
     translation.x += direction * paddle.speed * TIME_STEP;
-    p_pos = translation.x;
+    let p_pos: f32 = translation.x;
     // bound the paddle within the walls
     translation.x = translation.x.clamp(-400.0, 400.0);
-    just_bounced = paddle.just_bounced;
+    let just_bounced: Option<f32> = paddle.just_bounced;
     if let Some(ref mut t) = paddle.just_bounced {
         if 0.1 < *t {
             *t *= 0.8;
@@ -397,7 +395,7 @@ fn paddle_movement_system(
     }
 
     // move eyes
-    let mut eyes = queries.q1();
+    let mut eyes = queries.p1();
     for (eye, mut trans) in eyes.iter_mut() {
         if eye.is_left {
             trans.translation.x = p_pos - EYE_DIST;

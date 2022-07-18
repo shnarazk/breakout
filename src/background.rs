@@ -30,10 +30,10 @@ pub fn setup_background(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>
         [1.0, 1.0, 0.0],
         [1.0, -1.0, 0.0],
     ];
-    rect.set_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
+    rect.insert_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
     let mut v_color = vec![[0.0, 0.0, 0.0, 1.0]];
     v_color.extend_from_slice(&[[1.0, 1.0, 0.0, 1.0]; 3]);
-    rect.set_attribute(Mesh::ATTRIBUTE_COLOR, v_color);
+    rect.insert_attribute(Mesh::ATTRIBUTE_COLOR, v_color);
     let mut indices = vec![0, 1, 4];
     for i in 2..=4 {
         indices.extend_from_slice(&[0, i, i - 1]);
@@ -95,7 +95,7 @@ impl FromWorld for ColoredMesh2dPipeline {
 }
 
 // We implement `SpecializedPipeline` to customize the default rendering from `Mesh2dPipeline`
-impl SpecializedPipeline for ColoredMesh2dPipeline {
+impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
     type Key = Mesh2dPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
@@ -207,7 +207,7 @@ impl Plugin for ColoredMesh2dPlugin {
                 bind_group: None,
             })
             .init_resource::<ColoredMesh2dPipeline>()
-            .init_resource::<SpecializedPipelines<ColoredMesh2dPipeline>>()
+            .init_resource::<SpecializedRenderPipelines<ColoredMesh2dPipeline>>()
             .add_system_to_stage(RenderStage::Extract, extract_time)
             .add_system_to_stage(RenderStage::Extract, extract_colored_mesh2d)
             .add_system_to_stage(RenderStage::Prepare, prepare_time)
@@ -239,8 +239,8 @@ pub fn extract_colored_mesh2d(
 pub fn queue_colored_mesh2d(
     transparent_draw_functions: Res<DrawFunctions<Transparent2d>>,
     colored_mesh2d_pipeline: Res<ColoredMesh2dPipeline>,
-    mut pipelines: ResMut<SpecializedPipelines<ColoredMesh2dPipeline>>,
-    mut pipeline_cache: ResMut<RenderPipelineCache>,
+    mut pipelines: ResMut<SpecializedRenderPipelines<ColoredMesh2dPipeline>>,
+    mut pipeline_cache: ResMut<PipelineCache>,
     msaa: Res<Msaa>,
     render_meshes: Res<RenderAssets<Mesh>>,
     colored_mesh2d: Query<(&Mesh2dHandle, &Mesh2dUniform), With<ColoredMesh2d>>,
