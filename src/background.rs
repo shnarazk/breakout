@@ -123,6 +123,8 @@ impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
             VertexFormat::Float32x3,
             // VertexFormat::Float32x4,
             VertexFormat::Uint32,
+            // for time
+            VertexFormat::Uint32,
         ];
 
         let vertex_layout =
@@ -200,13 +202,18 @@ pub struct ColoredMesh2dPlugin;
 
 impl Plugin for ColoredMesh2dPlugin {
     fn build(&self, app: &mut App) {
-        let render_device = app.world.get_resource::<RenderDevice>().unwrap();
+        let render_device = app.world.resource::<RenderDevice>();
         let buffer = render_device.create_buffer(&BufferDescriptor {
             label: Some("time uniform buffer"),
             size: std::mem::size_of::<f32>() as u64,
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
+        // let shaders = app.world.resource_mut::<Assets<Shader>>();
+        // shaders.set_untracked(
+        //     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 202207222221),
+        //     Shader::from_wgsl(),
+        // );
 
         // Register our custom draw function and pipeline, and add our render systems
         let render_app = app.get_sub_app_mut(RenderApp).unwrap();
