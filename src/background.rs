@@ -31,8 +31,8 @@ pub fn setup_background(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>
         [1.0, -1.0, 0.0],
     ];
     rect.insert_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
-    let mut v_color = vec![[0.0, 0.0, 0.0, 1.0]];
-    v_color.extend_from_slice(&[[1.0, 1.0, 0.0, 1.0]; 3]);
+    let mut v_color: Vec<u32> = vec![Color::BLACK.as_linear_rgba_u32()];
+    v_color.extend_from_slice(&[Color::YELLOW.as_linear_rgba_u32(); 3]);
     rect.insert_attribute(Mesh::ATTRIBUTE_COLOR, v_color);
     let mut indices = vec![0, 1, 4];
     for i in 2..=4 {
@@ -65,8 +65,8 @@ pub struct ColoredMesh2dPipeline {
 
 impl FromWorld for ColoredMesh2dPipeline {
     fn from_world(world: &mut World) -> Self {
-        let world = world.cell();
-        let asset_server = world.get_resource::<AssetServer>().unwrap();
+        // let world = world.cell();
+        let asset_server = world.resource::<AssetServer>();
         let shader = asset_server.load("shaders/background.wgsl");
 
         let render_device = world.get_resource_mut::<RenderDevice>().unwrap();
