@@ -31,7 +31,7 @@ fn main() {
             just_changed: None,
         })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
-        // .add_plugin(ColoredMesh2dPlugin)
+        .add_plugin(ColoredMesh2dPlugin)
         .add_startup_system(setup)
         .add_system_set(
             SystemSet::new()

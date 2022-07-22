@@ -1,40 +1,49 @@
 // Import the standard 2d mesh uniforms and set their bind groups
-#import bevy_sprite::mesh2d_view_bind_group
-[[group(0), binding(0)]]
-var<uniform> view: View;
-#import bevy_sprite::mesh2d_struct
-[[group(1), binding(0)]]
+#import bevy_sprite::mesh2d_types
+#import bevy_sprite::mesh2d_view_bindings
+#import bevy_sprite::mesh2d_functions
+
+@group(1) @binding(0)
 var<uniform> mesh: Mesh2d;
 
 // The structure of the vertex buffer is as specified in `specialize()`
 struct Vertex {
-    [[location(0)]] position: vec3<f32>;
-    [[location(1)]] color: vec4<f32>;
+    @location(0) position: vec3<f32>;
+    @location(1) color: u32;
 };
 
 struct Time {
     time_since_startup: f32;
 };
-[[group(2), binding(0)]]
+@group(2) @binding(0)
 var<uniform> time: Time;
 
 struct VertexOutput {
     // The vertex shader must set the on-screen position of the vertex
-    [[builtin(position)]] clip_position: vec4<f32>;
+    @builtin(position) clip_position: vec4<f32>;
     // We pass the vertex color to the framgent shader in location 0
-    [[location(0)]] position: vec3<f32>;
+    @location(0) color: vec4<f32>;
 };
 
-[[stage(vertex)]]
+@stage(vertex)
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
-    let world_position = mesh.model * vec4<f32>(vertex.position, 1.0);
-    // let world_position = vec4<f32>(vertex.position, 1.0);
-    let position = view.view_proj * world_position;
-    out.clip_position = position;
-    out.position = vertex.position;
+    // Project the world position of the mesh into screen position
+    out.clip_position = mesh2d_position_local_to_clip(mesh.model, vec4<f32>(vertex.position, 1.0));
+    // Unpack the `u32` from the vertex buffer into the `vec4<f32>` used by the fragment shader
+    out.color = vec4<f32>((vec4<u32>(vertex.color) >> vec4<u32>(0u, 8u, 16u, 24u)) & vec4<u32>(255u))
     return out;
 }
+// fn vertex(vertex: Vertex) -> VertexOutput {
+//     var out: VertexOutput;
+//     let world_position = mesh.model * vec4<f32>(vertex.position, 1.0);
+//     // let world_position = vec4<f32>(vertex.position, 1.0);
+//     let position = view.view_proj * world_position;
+//     out.clip_position = position;
+//     // out.position = vertex.position;
+//     out.color = vec4<f32>
+//     return out;
+// }
 
 fn oklab_to_linear_srgb(c: vec3<f32>) -> vec3<f32> {
     let L = c.x;
@@ -56,27 +65,32 @@ fn oklab_to_linear_srgb(c: vec3<f32>) -> vec3<f32> {
 
 struct FragmentInput {
     // The color is interpolated between vertices by default
-    [[location(0)]] position: vec3<f32>;
+    @location(0) color: vec4<f32>;
 };
 
-[[stage(fragment)]]
-fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
-    let speed_1 = 0.3;
-    let speed_2 = 0.2;
-    let time_since_startup = time.time_since_startup;
-    let t_1 = sin(time_since_startup * speed_1) * 0.5 + 0.5;
-    let t_2 = cos(time_since_startup * speed_2);
-
-    let pos = vec2<f32>(in.position.x, in.position.y);
-    let distance_to_center = distance(pos, vec2<f32>(t_2, t_1)) * 1.2;
-
-    // blending is done in a perceptual color space: https://bottosson.github.io/posts/oklab/
-    let red = vec3<f32>(0.627955, 0.224863, 0.125846);
-    let green = vec3<f32>(0.86644, -0.233887, 0.179498);
-    let blue = vec3<f32>(0.701674, 0.274566, -0.169156);
-    let white = vec3<f32>(1.0, 0.0, 0.0);
-    let mixed = mix(mix(red, blue, t_1), mix(green, white, t_2), distance_to_center);
-
-    return vec4<f32>(oklab_to_linear_srgb(mixed), 1.0);
-    // return in.color;
+@fragment
+fn fragment(in: FragmentInput) -> @location(0) vec4<f32> {
+    return in.color;
 }
+
+// [[stage(fragment)]]
+// fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
+//     let speed_1 = 0.3;
+//     let speed_2 = 0.2;
+//     let time_since_startup = time.time_since_startup;
+//     let t_1 = sin(time_since_startup * speed_1) * 0.5 + 0.5;
+//     let t_2 = cos(time_since_startup * speed_2);
+
+//     let pos = vec2<f32>(in.position.x, in.position.y);
+//     let distance_to_center = distance(pos, vec2<f32>(t_2, t_1)) * 1.2;
+
+//     // blending is done in a perceptual color space: https://bottosson.github.io/posts/oklab/
+//     let red = vec3<f32>(0.627955, 0.224863, 0.125846);
+//     let green = vec3<f32>(0.86644, -0.233887, 0.179498);
+//     let blue = vec3<f32>(0.701674, 0.274566, -0.169156);
+//     let white = vec3<f32>(1.0, 0.0, 0.0);
+//     let mixed = mix(mix(red, blue, t_1), mix(green, white, t_2), distance_to_center);
+
+//     return vec4<f32>(oklab_to_linear_srgb(mixed), 1.0);
+//     // return in.color;
+// }

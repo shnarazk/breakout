@@ -101,23 +101,32 @@ impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
         // Customize how to store the meshes' vertex attributes in the vertex buffer
         // Our meshes only have position and color
-        let vertex_attributes = vec![
-            VertexAttribute {
-                format: VertexFormat::Float32x3,
-                // this offset is the size of the color attribute, which is stored first
-                offset: 16,
-                // position is available at location 0 in the shader
-                shader_location: 0,
-            },
-            // Color
-            VertexAttribute {
-                format: VertexFormat::Float32x4,
-                offset: 0,
-                shader_location: 1,
-            },
-        ];
+        // let vertex_attributes = vec![
+        //     VertexAttribute {
+        //         format: VertexFormat::Float32x3,
+        //         // this offset is the size of the color attribute, which is stored first
+        //         offset: 16,
+        //         // position is available at location 0 in the shader
+        //         shader_location: 0,
+        //     },
+        //     // Color
+        //     VertexAttribute {
+        //         format: VertexFormat::Float32x4,
+        //         offset: 0,
+        //         shader_location: 1,
+        //     },
+        // ];
         // This is the sum of the size of position and color attributes (12 + 16 = 28)
-        let vertex_array_stride = 28;
+        // let vertex_array_stride = 28;
+
+        let formats = vec![
+            VertexFormat::Float32x3,
+            // VertexFormat::Float32x4,
+            VertexFormat::Uint32,
+        ];
+
+        let vertex_layout =
+            VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, formats);
 
         RenderPipelineDescriptor {
             vertex: VertexState {
@@ -126,11 +135,12 @@ impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
                 entry_point: "vertex".into(),
                 shader_defs: Vec::new(),
                 // Use our custom vertex buffer
-                buffers: vec![VertexBufferLayout {
-                    array_stride: vertex_array_stride,
-                    step_mode: VertexStepMode::Vertex,
-                    attributes: vertex_attributes,
-                }],
+                // buffers: vec![VertexBufferLayout {
+                //     array_stride: vertex_array_stride,
+                //     step_mode: VertexStepMode::Vertex,
+                //     attributes: vertex_attributes,
+                // }],
+                buffers: vec![vertex_layout],
             },
             fragment: Some(FragmentState {
                 // Use our custom shader
