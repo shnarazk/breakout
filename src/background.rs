@@ -4,7 +4,7 @@ use bevy::{
     ecs::system::{lifetimeless::SRes, SystemParamItem},
     prelude::*,
     render::{
-        mesh::{Indices, MeshVertexBufferLayout},
+        mesh::Indices,
         render_asset::RenderAssets,
         render_phase::{
             AddRenderCommand, DrawFunctions, EntityRenderCommand, RenderCommandResult, RenderPhase,
@@ -12,10 +12,9 @@ use bevy::{
         },
         render_resource::*,
         renderer::{RenderDevice, RenderQueue},
-        // texture::BevyDefault,
+        texture::BevyDefault,
         view::VisibleEntities,
-        RenderApp,
-        RenderStage,
+        RenderApp, RenderStage,
     },
     sprite::{
         DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform,
@@ -66,9 +65,11 @@ pub struct ColoredMesh2dPipeline {
 
 impl FromWorld for ColoredMesh2dPipeline {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.resource::<AssetServer>();
+        let world = world.cell();
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
         let shader = asset_server.load("shaders/background.wgsl");
-        let render_device = world.resource_mut::<RenderDevice>();
+
+        let render_device = world.get_resource_mut::<RenderDevice>().unwrap();
         let time_bind_group_layout =
             render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 label: Some("time bind group"),
@@ -83,7 +84,7 @@ impl FromWorld for ColoredMesh2dPipeline {
                     count: None,
                 }],
             });
-        let mesh2d_pipeline = world.resource::<Mesh2dPipeline>().clone();
+        let mesh2d_pipeline = world.get_resource::<Mesh2dPipeline>().unwrap().clone();
 
         Self {
             shader,
@@ -94,23 +95,89 @@ impl FromWorld for ColoredMesh2dPipeline {
 }
 
 // We implement `SpecializedPipeline` to customize the default rendering from `Mesh2dPipeline`
-impl SpecializedMeshPipeline for ColoredMesh2dPipeline {
+impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
     type Key = Mesh2dPipelineKey;
 
-    fn specialize(
-        &self,
-        key: Self::Key,
-        layout: &MeshVertexBufferLayout,
-    ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
-        let mut descriptor = self.mesh2d_pipeline.specialize(key, layout)?;
-        descriptor.vertex.shader = self.shader.clone();
-        descriptor.fragment.as_mut().unwrap().shader = self.shader.clone();
-        descriptor.layout = Some(vec![
-            self.mesh2d_pipeline.view_layout.clone(),
-            self.mesh2d_pipeline.mesh_layout.clone(),
-            self.time_bind_group_layout.clone(),
-        ]);
-        Ok(descriptor)
+    fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
+        // Customize how to store the meshes' vertex attributes in the vertex buffer
+        // Our meshes only have position and color
+        // let vertex_attributes = vec![
+        //     VertexAttribute {
+        //         format: VertexFormat::Float32x3,
+        //         // this offset is the size of the color attribute, which is stored first
+        //         offset: 16,
+        //         // position is available at location 0 in the shader
+        //         shader_location: 0,
+        //     },
+        //     // Color
+        //     VertexAttribute {
+        //         format: VertexFormat::Float32x4,
+        //         offset: 0,
+        //         shader_location: 1,
+        //     },
+        // ];
+        // This is the sum of the size of position and color attributes (12 + 16 = 28)
+        // let vertex_array_stride = 28;
+
+        let formats = vec![
+            VertexFormat::Float32x3,
+            // VertexFormat::Float32x4,
+            VertexFormat::Uint32,
+        ];
+
+        let vertex_layout =
+            VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, formats);
+
+        RenderPipelineDescriptor {
+            vertex: VertexState {
+                // Use our custom shader
+                shader: self.shader.clone(),
+                entry_point: "vertex".into(),
+                shader_defs: Vec::new(),
+                // Use our custom vertex buffer
+                // buffers: vec![VertexBufferLayout {
+                //     array_stride: vertex_array_stride,
+                //     step_mode: VertexStepMode::Vertex,
+                //     attributes: vertex_attributes,
+                // }],
+                buffers: vec![vertex_layout],
+            },
+            fragment: Some(FragmentState {
+                // Use our custom shader
+                shader: self.shader.clone(),
+                shader_defs: Vec::new(),
+                entry_point: "fragment".into(),
+                targets: vec![ColorTargetState {
+                    format: TextureFormat::bevy_default(),
+                    blend: Some(BlendState::ALPHA_BLENDING),
+                    write_mask: ColorWrites::ALL,
+                }],
+            }),
+            // Use the two standard uniforms for 2d meshes
+            layout: Some(vec![
+                // Bind group 0 is the view uniform
+                self.mesh2d_pipeline.view_layout.clone(),
+                // Bind group 1 is the mesh uniform
+                self.mesh2d_pipeline.mesh_layout.clone(),
+                self.time_bind_group_layout.clone(),
+            ]),
+            primitive: PrimitiveState {
+                front_face: FrontFace::Ccw,
+                cull_mode: Some(Face::Back),
+                unclipped_depth: false,
+                polygon_mode: PolygonMode::Fill,
+                conservative: false,
+                topology: key.primitive_topology(),
+                strip_index_format: None,
+            },
+            depth_stencil: None,
+            multisample: MultisampleState {
+                count: key.msaa_samples(),
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            label: Some("colored_mesh2d_pipeline".into()),
+        }
     }
 }
 
@@ -133,7 +200,7 @@ pub struct ColoredMesh2dPlugin;
 
 impl Plugin for ColoredMesh2dPlugin {
     fn build(&self, app: &mut App) {
-        let render_device = app.world.resource::<RenderDevice>();
+        let render_device = app.world.get_resource::<RenderDevice>().unwrap();
         let buffer = render_device.create_buffer(&BufferDescriptor {
             label: Some("time uniform buffer"),
             size: std::mem::size_of::<f32>() as u64,
@@ -150,7 +217,7 @@ impl Plugin for ColoredMesh2dPlugin {
                 bind_group: None,
             })
             .init_resource::<ColoredMesh2dPipeline>()
-            .init_resource::<SpecializedMeshPipelines<ColoredMesh2dPipeline>>()
+            .init_resource::<SpecializedRenderPipelines<ColoredMesh2dPipeline>>()
             .add_system_to_stage(RenderStage::Extract, extract_time)
             .add_system_to_stage(RenderStage::Extract, extract_colored_mesh2d)
             .add_system_to_stage(RenderStage::Prepare, prepare_time)
@@ -182,7 +249,7 @@ pub fn extract_colored_mesh2d(
 pub fn queue_colored_mesh2d(
     transparent_draw_functions: Res<DrawFunctions<Transparent2d>>,
     colored_mesh2d_pipeline: Res<ColoredMesh2dPipeline>,
-    mut pipelines: ResMut<SpecializedMeshPipelines<ColoredMesh2dPipeline>>,
+    mut pipelines: ResMut<SpecializedRenderPipelines<ColoredMesh2dPipeline>>,
     mut pipeline_cache: ResMut<PipelineCache>,
     msaa: Res<Msaa>,
     render_meshes: Res<RenderAssets<Mesh>>,
@@ -209,28 +276,22 @@ pub fn queue_colored_mesh2d(
                 if let Some(mesh) = render_meshes.get(&mesh2d_handle.0) {
                     mesh2d_key |=
                         Mesh2dPipelineKey::from_primitive_topology(mesh.primitive_topology);
-
-                    let pipeline = pipelines
-                        .specialize(
-                            &mut pipeline_cache,
-                            &colored_mesh2d_pipeline,
-                            mesh2d_key,
-                            &mesh.layout,
-                        )
-                        .unwrap();
-
-                    let mesh_z = mesh2d_uniform.transform.w_axis.z;
-                    transparent_phase.add(Transparent2d {
-                        entity: *visible_entity,
-                        draw_function: draw_colored_mesh2d,
-                        pipeline,
-                        // The 2d render items are sorted according to their z value before rendering,
-                        // in order to get correct transparency
-                        sort_key: FloatOrd(mesh_z),
-                        // This material is not batched
-                        batch_range: None,
-                    });
                 }
+
+                let pipeline_id =
+                    pipelines.specialize(&mut pipeline_cache, &colored_mesh2d_pipeline, mesh2d_key);
+
+                let mesh_z = mesh2d_uniform.transform.w_axis.z;
+                transparent_phase.add(Transparent2d {
+                    entity: *visible_entity,
+                    draw_function: draw_colored_mesh2d,
+                    pipeline: pipeline_id,
+                    // The 2d render items are sorted according to their z value before rendering,
+                    // in order to get correct transparency
+                    sort_key: FloatOrd(mesh_z),
+                    // This material is not batched
+                    batch_range: None,
+                });
             }
         }
     }
