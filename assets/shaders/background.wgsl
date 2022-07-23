@@ -59,23 +59,22 @@ struct FragmentInput {
 };
 
 [[stage(fragment)]]
-fn fragment(in: FragmentInput) -> [[location(0)]] vec4<f32> {
-    // let speed_1 = 0.3;
-    // let speed_2 = 0.2;
-    // let time_since_startup = 0; // time.time_since_startup;
-    // let t_1 = sin(time_since_startup * speed_1) * 0.5 + 0.5;
-    // let t_2 = cos(time_since_startup * speed_2);
+fn fragment(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+    let speed_1 = 0.3;
+    let speed_2 = 0.2;
+    let t_1 = sin(time.time_since_startup * speed_1) * 0.5 + 0.5;
+    let t_2 = cos(time.time_since_startup * speed_2);
 
-    // let pos = vec2<f32>(in.position.x, in.position.y);
-    // let distance_to_center = distance(pos, vec2<f32>(t_2, t_1)) * 1.2;
+    let pos = vec2<f32>(in.clip_position[0], in.clip_position[1]);
+    let distance_to_center = distance(pos, vec2<f32>(t_2, t_1)) * 1.2;
 
-    // // blending is done in a perceptual color space: https://bottosson.github.io/posts/oklab/
-    // let red = vec3<f32>(0.627955, 0.224863, 0.125846);
-    // let green = vec3<f32>(0.86644, -0.233887, 0.179498);
-    // let blue = vec3<f32>(0.701674, 0.274566, -0.169156);
-    // let white = vec3<f32>(1.0, 0.0, 0.0);
-    // let mixed = mix(mix(red, blue, t_1), mix(green, white, t_2), distance_to_center);
+    // blending is done in a perceptual color space: https://bottosson.github.io/posts/oklab/
+    let red = vec3<f32>(0.627955, 0.224863, 0.125846);
+    let green = vec3<f32>(0.86644, -0.233887, 0.179498);
+    let blue = vec3<f32>(0.701674, 0.274566, -0.169156);
+    let white = vec3<f32>(1.0, 0.0, 0.0);
+    let mixed = mix(mix(red, blue, t_1), mix(green, white, t_2), distance_to_center);
 
-    // return vec4<f32>(oklab_to_linear_srgb(mixed), 1.0);
-    return in.color;
+    return vec4<f32>(oklab_to_linear_srgb(mixed), 1.0);
+    // return in.color;
 }
