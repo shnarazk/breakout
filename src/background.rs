@@ -65,7 +65,6 @@ pub struct ColoredMesh2dPipeline {
 
 impl FromWorld for ColoredMesh2dPipeline {
     fn from_world(world: &mut World) -> Self {
-        // let world = world.cell();
         let asset_server = world.resource::<AssetServer>();
         let shader = asset_server.load("shaders/background.wgsl");
 
@@ -84,7 +83,7 @@ impl FromWorld for ColoredMesh2dPipeline {
                     count: None,
                 }],
             });
-        let mesh2d_pipeline = world.get_resource::<Mesh2dPipeline>().unwrap().clone();
+        let mesh2d_pipeline = world.resource::<Mesh2dPipeline>().clone();
 
         Self {
             shader,
@@ -121,7 +120,6 @@ impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
 
         let formats = vec![
             VertexFormat::Float32x3,
-            // VertexFormat::Float32x4,
             VertexFormat::Uint32,
             // for time
             VertexFormat::Uint32,
@@ -136,12 +134,6 @@ impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
                 shader: self.shader.clone(),
                 entry_point: "vertex".into(),
                 shader_defs: Vec::new(),
-                // Use our custom vertex buffer
-                // buffers: vec![VertexBufferLayout {
-                //     array_stride: vertex_array_stride,
-                //     step_mode: VertexStepMode::Vertex,
-                //     attributes: vertex_attributes,
-                // }],
                 buffers: vec![vertex_layout],
             },
             fragment: Some(FragmentState {
@@ -304,6 +296,9 @@ pub fn queue_colored_mesh2d(
     }
 }
 
+///
+/// Animation part
+///
 #[derive(Default)]
 struct ExtractedTime {
     seconds_since_startup: f32,
