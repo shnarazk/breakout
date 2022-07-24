@@ -3,10 +3,13 @@ use bevy::window::WindowPlugin;
 use {
     bevy::{
         prelude::*,
-        sprite::collide_aabb::{collide, Collision},
+        sprite::{
+            collide_aabb::{collide, Collision},
+            Material2dPlugin,
+        },
         time::FixedTimestep,
     },
-    breakout::background::{ColoredMesh2dPlugin, CustomMaterial},
+    breakout::background::{setup_background, CustomMaterial},
     rand::prelude::random,
 };
 
@@ -35,7 +38,8 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.2)))
         // .add_plugin(ColoredMesh2dPlugin)
         .add_plugin(WindowPlugin)
-        .add_plugin(MaterialPlugin::<CustomMaterial>::default())
+        .add_plugin(Material2dPlugin::<CustomMaterial>::default())
+        .add_startup_system(setup_background)
         .add_startup_system(setup)
         .add_system_set(
             SystemSet::new()
