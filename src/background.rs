@@ -1,54 +1,133 @@
-use bevy::{
-    core::FloatOrd,
-    core_pipeline::Transparent2d,
-    ecs::system::{lifetimeless::SRes, SystemParamItem},
-    prelude::*,
-    render::{
-        mesh::Indices,
-        render_asset::RenderAssets,
-        render_phase::{
-            AddRenderCommand, DrawFunctions, EntityRenderCommand, RenderCommandResult, RenderPhase,
-            SetItemPipeline, TrackedRenderPass,
+use {
+    bevy::{
+        core_pipeline::core_2d::Transparent2d,
+        ecs::system::{lifetimeless::SRes, SystemParamItem},
+        prelude::*,
+        reflect::TypeUuid,
+        render::{
+            mesh::{Indices, MeshVertexAttribute},
+            render_asset::RenderAssets,
+            render_phase::{
+                AddRenderCommand, DrawFunctions, EntityRenderCommand, RenderCommandResult,
+                RenderPhase, SetItemPipeline, TrackedRenderPass,
+            },
+            render_resource::*,
+            render_resource::{AsBindGroup, ShaderRef},
+            renderer::{RenderDevice, RenderQueue},
+            texture::BevyDefault,
+            view::VisibleEntities,
+            RenderApp, RenderStage,
         },
-        render_resource::*,
-        renderer::{RenderDevice, RenderQueue},
-        texture::BevyDefault,
-        view::VisibleEntities,
-        RenderApp, RenderStage,
+        sprite::{
+            DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform,
+            SetMesh2dBindGroup, SetMesh2dViewBindGroup,
+        },
+        utils::FloatOrd,
     },
-    sprite::{
-        DrawMesh2d, Mesh2dHandle, Mesh2dPipeline, Mesh2dPipelineKey, Mesh2dUniform,
-        SetMesh2dBindGroup, SetMesh2dViewBindGroup,
-    },
+    std::f32::consts::FRAC_PI_3,
 };
 
-pub fn setup_background(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+pub fn setup_background(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut custom_materials: ResMut<Assets<CustomMaterial>>,
+) {
     let mut rect = Mesh::new(PrimitiveTopology::TriangleList);
-    let v_pos: Vec<[f32; 3]> = vec![
-        [-1.0, -1.0, 0.0],
-        [-1.0, 1.0, 0.0],
-        [1.0, 1.0, 0.0],
-        [1.0, -1.0, 0.0],
-    ];
-    rect.insert_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
-    let mut v_color: Vec<u32> = vec![Color::BLACK.as_linear_rgba_u32()];
-    v_color.extend_from_slice(&[Color::YELLOW.as_linear_rgba_u32(); 3]);
-    rect.insert_attribute(Mesh::ATTRIBUTE_COLOR, v_color);
-    let mut indices = vec![0, 1, 4];
-    for i in 2..=4 {
-        indices.extend_from_slice(&[0, i, i - 1]);
+    {
+        let v_pos: Vec<[f32; 3]> = vec![
+            // [-1.0, -1.0, 0.0],
+            // [-1.0, 1.0, 0.0],
+            // [1.0, 1.0, 0.0],
+            // [1.0, -1.0, 0.0],
+            // [-1.0, -1.0, 0.0],
+            // [-1.0, 1.0, 0.0],
+            // [2.0, 1.0, 0.0],
+            // [2.0, -1.0, 0.0],
+            [
+                (0.0 * FRAC_PI_3).cos() * 100.0,
+                (0.0 * FRAC_PI_3).cos() * 100.0,
+                0.0,
+            ],
+            [
+                (2.0 * FRAC_PI_3).cos() * 100.0,
+                (2.0 * FRAC_PI_3).cos() * 100.0,
+                0.0,
+            ],
+            [
+                (4.0 * FRAC_PI_3).cos() * 100.0,
+                (4.0 * FRAC_PI_3).cos() * 100.0,
+                0.0,
+            ],
+        ];
+        rect.insert_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
+        let v_color: Vec<u32> = vec![
+            Color::GREEN.as_linear_rgba_u32(),
+            Color::GREEN.as_linear_rgba_u32(),
+            Color::GREEN.as_linear_rgba_u32(),
+        ];
+        // rect.insert_attribute(Mesh::ATTRIBUTE_COLOR, v_color);
+        rect.insert_attribute(
+            MeshVertexAttribute::new("Vertex_Color", 1, VertexFormat::Uint32),
+            v_color,
+        );
+        let indices: Vec<u32> = vec![0, 2, 1];
+        // for i in 2..4 {
+        //     // indices.extend_from_slice(&[i - 1, i, i + 1]);
+        //     indices.extend_from_slice(&[0, i, i - 1]);
+        // }
+        rect.set_indices(Some(Indices::U32(indices)));
     }
-    rect.set_indices(Some(Indices::U32(indices)));
-    commands.spawn_bundle((
-        ColoredMesh2d::default(),
-        Mesh2dHandle(meshes.add(rect)),
-        // Transform::default(),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).with_scale(Vec3::splat(700.0)),
-        // Transform::default().with_scale(Vec3::splat(128.)),
-        GlobalTransform::default(),
-        Visibility::default(),
-        ComputedVisibility::default(),
-    ));
+    let mut star = Mesh::new(PrimitiveTopology::TriangleList);
+    {
+        let mut v_pos = vec![[0.0, 0.0, 0.0]];
+        for i in 0..10 {
+            let a = std::f32::consts::FRAC_PI_2 - i as f32 * std::f32::consts::TAU / 10.0;
+            let r = (1 - i % 2) as f32 * 100.0 + 100.0;
+            v_pos.push([r * a.cos(), r * a.sin(), 0.0]);
+        }
+        star.insert_attribute(Mesh::ATTRIBUTE_POSITION, v_pos);
+        let mut v_color: Vec<u32> = vec![Color::BLACK.as_linear_rgba_u32()];
+        v_color.extend_from_slice(&[Color::YELLOW.as_linear_rgba_u32(); 10]);
+        star.insert_attribute(
+            MeshVertexAttribute::new("Vertex_Color", 1, VertexFormat::Uint32),
+            v_color,
+        );
+        let mut indices = vec![0, 1, 10];
+        for i in 2..=10 {
+            indices.extend_from_slice(&[0, i, i - 1]);
+        }
+        star.set_indices(Some(Indices::U32(indices)));
+    }
+    // commands.spawn_bundle((
+    //     ColoredMesh2d::default(),
+    //     Mesh2dHandle(meshes.add(rect)),
+    //     Transform::default(),
+    //     // Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)).with_scale(Vec3::splat(700.0)),
+    //     // Transform::default().with_scale(Vec3::splat(0.128.)),
+    //     GlobalTransform::default(),
+    //     Visibility::default(),
+    //     ComputedVisibility::default(),
+    // ));
+    commands.spawn().insert_bundle(MaterialMeshBundle {
+        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        material: custom_materials.add(CustomMaterial {}),
+        ..default()
+    });
+}
+
+#[derive(AsBindGroup, Debug, Clone, TypeUuid)]
+#[uuid = "b62bb455-a72c-4b56-87bb-81e0554e234f"]
+pub struct CustomMaterial {
+    // #[texture(0)]
+    // #[sampler(1)]
+    // texture: Handle<Image>,
+}
+
+impl Material for CustomMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/screen_bg.wgsl".into()
+    }
 }
 
 /// A marker component for colored 2d meshes
@@ -141,11 +220,11 @@ impl SpecializedRenderPipeline for ColoredMesh2dPipeline {
                 shader: self.shader.clone(),
                 shader_defs: Vec::new(),
                 entry_point: "fragment".into(),
-                targets: vec![ColorTargetState {
+                targets: vec![Some(ColorTargetState {
                     format: TextureFormat::bevy_default(),
                     blend: Some(BlendState::ALPHA_BLENDING),
                     write_mask: ColorWrites::ALL,
-                }],
+                })],
             }),
             // Use the two standard uniforms for 2d meshes
             layout: Some(vec![
@@ -234,7 +313,7 @@ pub fn extract_colored_mesh2d(
 ) {
     let mut values = Vec::with_capacity(*previous_len);
     for (entity, computed_visibility) in query.iter() {
-        if !computed_visibility.is_visible {
+        if !computed_visibility.is_visible() {
             continue;
         }
         values.push((entity, (ColoredMesh2d,)));

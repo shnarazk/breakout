@@ -29,7 +29,8 @@ struct VertexOutput {
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
     // Project the world position of the mesh into screen position
-    out.clip_position = view.view_proj * mesh.model * vec4<f32>(vertex.position, 1.0);
+    // out.clip_position = view.view_proj * mesh.model * vec4<f32>(vertex.position, 1.0);
+    out.clip_position = vec4<f32>(vertex.position, 1.0);
     // Unpack the `u32` from the vertex buffer into the `vec4<f32>` used by the fragment shader
     out.color = vec4<f32>((vec4<u32>(vertex.color) >> vec4<u32>(0u, 8u, 16u, 24u)) & vec4<u32>(255u)) / 255.0;
     return out;
@@ -75,6 +76,7 @@ fn fragment(in: VertexOutput) -> [[location(0)]] vec4<f32> {
     let white = vec3<f32>(1.0, 0.0, 0.0);
     let mixed = mix(mix(red, blue, t_1), mix(green, white, t_2), distance_to_center);
 
-    return vec4<f32>(oklab_to_linear_srgb(mixed), 1.0);
+    // return vec4<f32>(oklab_to_linear_srgb(mixed), 1.0);
+    return vec4<f32>(mixed, 1.0);
     // return in.color;
 }
