@@ -18,7 +18,7 @@ pub fn setup_background(
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
         // material: materials.add(ColorMaterial::from(Color::PURPLE)),
         material: custom_materials.add(CustomMaterial {
-            // texture: asset_server.load("sprites/eye.png"),
+            texture: asset_server.load("sprites/eye.png"),
         }),
         ..default()
     });
@@ -27,9 +27,9 @@ pub fn setup_background(
 #[derive(AsBindGroup, Debug, Clone, TypeUuid)]
 #[uuid = "b62bb455-a72c-4b56-87bb-81e0554e234f"]
 pub struct CustomMaterial {
-    // #[texture(0)]
-    // #[sampler(1)]
-    // texture: Handle<Image>,
+    #[texture(0)]
+    #[sampler(1)]
+    texture: Handle<Image>,
 }
 
 impl Material2d for CustomMaterial {
@@ -37,7 +37,6 @@ impl Material2d for CustomMaterial {
         "shaders/mesh2d.wgsl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        // "shaders/screen_bg.wgsl".into()
         "shaders/mesh2d.wgsl".into()
     }
 }
