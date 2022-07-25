@@ -33,7 +33,11 @@ pub struct CustomMaterial {
 }
 
 impl Material2d for CustomMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/mesh2d.wgsl".into()
+    }
     fn fragment_shader() -> ShaderRef {
-        "shaders/screen_bg.wgsl".into()
+        // "shaders/screen_bg.wgsl".into()
+        "shaders/mesh2d.wgsl".into()
     }
 }
