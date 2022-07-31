@@ -40,7 +40,10 @@ fn main() {
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     // cube
     commands.spawn().insert_bundle((
-        meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+        meshes.add(Mesh::from(shape::Quad {
+            flip: false,
+            size: Vec2 { x: 2.0, y: 2.0 },
+        })),
         Transform::from_xyz(0.0, 0.5, 0.0),
         GlobalTransform::default(),
         CustomMaterial,
