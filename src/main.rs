@@ -1,10 +1,15 @@
+use bevy::window::WindowPlugin;
+
 use {
     bevy::{
-        core::FixedTimestep,
         prelude::*,
-        sprite::collide_aabb::{collide, Collision},
+        sprite::{
+            collide_aabb::{collide, Collision},
+            Material2dPlugin,
+        },
+        time::FixedTimestep,
     },
-    breakout::background::ColoredMesh2dPlugin,
+    breakout::background::{setup_background, CustomMaterial},
     rand::prelude::random,
 };
 
@@ -30,8 +35,11 @@ fn main() {
             keeping: false,
             just_changed: None,
         })
-        .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
+        .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.2)))
         // .add_plugin(ColoredMesh2dPlugin)
+        .add_plugin(WindowPlugin)
+        .add_plugin(Material2dPlugin::<CustomMaterial>::default())
+        .add_startup_system(setup_background)
         .add_startup_system(setup)
         .add_system_set(
             SystemSet::new()
@@ -43,7 +51,7 @@ fn main() {
         )
         .add_system(scoreboard_system)
         .add_system(bonus_notifier_system)
-        .add_system(bevy::input::system::exit_on_esc_system)
+        // .add_system(bevy::input::system::exit_on_all_closed)
         .run();
 }
 
@@ -98,8 +106,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Add the game's entities to our world
 
     // cameras
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(UiCameraBundle::default());
+    // commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(Camera2dBundle::default());
+    // commands.spawn_bundle(UiCameraBundle::default());
     // paddle
     commands
         .spawn_bundle(SpriteBundle {
@@ -215,7 +224,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             },
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect {
+                position: UiRect {
                     top: Val::Percent(60.0),
                     left: Val::Percent(45.0),
                     ..Default::default()
@@ -229,21 +238,23 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // bonus notifier
     commands
         .spawn_bundle(TextBundle {
-            text: Text::with_section(
-                "+1".to_string(),
-                TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 100.0,
-                    color: Color::rgba(1.0, 0.2, 0.0, 0.8),
-                },
-                TextAlignment {
+            text: Text {
+                sections: vec![TextSection {
+                    value: "+1".to_string(),
+                    style: TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 100.0,
+                        color: Color::rgba(1.0, 0.2, 0.0, 0.8),
+                    },
+                }],
+                alignment: TextAlignment {
                     horizontal: HorizontalAlign::Center,
                     ..Default::default()
                 },
-            ),
+            },
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect {
+                position: UiRect {
                     top: Val::Percent(35.0),
                     left: Val::Percent(40.0),
                     ..Default::default()

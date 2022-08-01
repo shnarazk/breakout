@@ -1,8 +1,13 @@
 [package]
 name = "breakout"
-version = "0.1.1"
+version = "0.2.0-phase1"
 edition = "2021"
 
 [dependencies]
-bevy = "0.7"
+bevy = "0.8"
 rand = "0.8"
+
+[[example]]
+name = "anim"
+path = "ref/animate_shader.rs"
+
