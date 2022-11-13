@@ -410,19 +410,18 @@ fn paddle_movement_system(
     // move eyes
     let mut eyes = queries.p1();
     for (eye, mut trans) in eyes.iter_mut() {
-        if eye.is_left {
-            trans.translation.x = p_pos - EYE_DIST;
+        trans.translation.x = if eye.is_left {
+            p_pos - EYE_DIST
         } else {
-            trans.translation.x = p_pos + EYE_DIST;
-        }
-        if let Some(ref t) = just_bounced {
-            if 0.1 < *t {
-                trans.scale.x = 0.25 + 0.5 * *t;
-                trans.scale.y = 0.25 + 0.5 * *t;
-            } else {
-                trans.scale.x = 0.25;
-                trans.scale.y = 0.25;
-            }
+            p_pos + EYE_DIST
+        };
+        let Some(ref t) = just_bounced else { continue; };
+        if 0.1 < *t {
+            trans.scale.x = 0.25 + 0.5 * *t;
+            trans.scale.y = 0.25 + 0.5 * *t;
+        } else {
+            trans.scale.x = 0.25;
+            trans.scale.y = 0.25;
         }
     }
 }
@@ -434,16 +433,15 @@ fn ball_movement_system(mut ball_query: Query<(&mut Ball, &mut Transform)>) {
     // transform.rotation = transform.rotation.add(Quat::from_rotation_x(0.01));
     ball.rotation += 8.0 * TIME_STEP;
     transform.rotation = Quat::from_rotation_z(ball.rotation);
-    if let Some(ref mut t) = ball.just_bounced {
-        // double speed
-        transform.translation += 0.3 * vel;
-        const SCALE: f32 = 0.95;
-        transform.scale = Vec3::new(BALL_SIZE * (1.0 + *t), BALL_SIZE * (1.0 + *t), 0.0);
-        if 1.0 - SCALE < *t {
-            *t *= SCALE;
-        } else {
-            ball.just_bounced = None;
-        }
+    let Some(ref mut t) = ball.just_bounced else { return; };
+    // double speed
+    transform.translation += 0.3 * vel;
+    const SCALE: f32 = 0.95;
+    transform.scale = Vec3::new(BALL_SIZE * (1.0 + *t), BALL_SIZE * (1.0 + *t), 0.0);
+    if 1.0 - SCALE < *t {
+        *t *= SCALE;
+    } else {
+        ball.just_bounced = None;
     }
 }
 
@@ -497,18 +495,17 @@ fn brick_movement_system(
     const SCALE: f32 = 0.94;
     for (entity, mut brick, mut trans) in bricks.iter_mut() {
         let velocity = brick.velocity;
-        if let Some(ref mut t) = &mut brick.just_bounced {
-            if 1.0 - SCALE < *t {
-                *t *= SCALE;
-                if let Some(v) = velocity {
-                    trans.translation += *t * 0.6 * TIME_STEP * v;
-                }
-                trans.rotation = Quat::from_rotation_z(0.4 * random::<f32>());
-                trans.scale *= 0.99; // SCALE;
-            } else {
-                // scorable colliders should be despawned and increment the scoreboard on collision
-                commands.entity(entity).despawn();
+        let Some(ref mut t) = &mut brick.just_bounced else { continue; };
+        if 1.0 - SCALE < *t {
+            *t *= SCALE;
+            if let Some(v) = velocity {
+                trans.translation += *t * 0.6 * TIME_STEP * v;
             }
+            trans.rotation = Quat::from_rotation_z(0.4 * random::<f32>());
+            trans.scale *= 0.99; // SCALE;
+        } else {
+            // scorable colliders should be despawned and increment the scoreboard on collision
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -537,49 +534,48 @@ fn ball_collision_system(
             transform.translation,
             transform.scale.truncate(),
         );
-        if let Some(collision) = collision {
-            collided = true;
-            scoreboard.keeping = false;
+        let Some(collision) = collision else { continue; };
+        collided = true;
+        scoreboard.keeping = false;
 
-            // reflect the ball when it collides
-            let mut reflect_x = false;
-            let mut reflect_y = false;
+        // reflect the ball when it collides
+        let mut reflect_x = false;
+        let mut reflect_y = false;
 
-            // only reflect if the ball's velocity is going in the opposite direction of the
-            // collision
-            match collision {
-                Collision::Left => reflect_x = velocity.x > 0.0,
-                Collision::Right => reflect_x = velocity.x < 0.0,
-                Collision::Top => reflect_y = velocity.y < 0.0,
-                Collision::Bottom => reflect_y = velocity.y > 0.0,
-                Collision::Inside => (),
+        // only reflect if the ball's velocity is going in the opposite direction of the
+        // collision
+        match collision {
+            Collision::Left => reflect_x = velocity.x > 0.0,
+            Collision::Right => reflect_x = velocity.x < 0.0,
+            Collision::Top => reflect_y = velocity.y < 0.0,
+            Collision::Bottom => reflect_y = velocity.y > 0.0,
+            Collision::Inside => (),
+        }
+
+        // reflect velocity on the x-axis if we hit something on the x-axis
+        if reflect_x {
+            velocity.x = -velocity.x + random::<f32>() * 2.0;
+        }
+
+        // reflect velocity on the y-axis if we hit something on the y-axis
+        if reflect_y {
+            velocity.y = -velocity.y + random::<f32>() * 2.0;
+        }
+
+        if let Collider::Paddle = *collider {
+            if matches!(collision, Collision::Bottom) {
+                penalty = 2;
             }
-
-            // reflect velocity on the x-axis if we hit something on the x-axis
-            if reflect_x {
-                velocity.x = -velocity.x + random::<f32>() * 2.0;
+            collided_with_paddle = true;
+        } else if let Collider::Solid = *collider {
+            // break if this collide is on a solid, otherwise continue check
+            // whether a solid is also in collision
+            if matches!(collision, Collision::Top) && reflect_y {
+                scoreboard.brick_in_row = 1;
+                scoreboard.keeping = false;
+                penalty = penalty.max(1);
             }
-
-            // reflect velocity on the y-axis if we hit something on the y-axis
-            if reflect_y {
-                velocity.y = -velocity.y + random::<f32>() * 2.0;
-            }
-
-            if let Collider::Paddle = *collider {
-                if matches!(collision, Collision::Bottom) {
-                    penalty = 2;
-                }
-                collided_with_paddle = true;
-            } else if let Collider::Solid = *collider {
-                // break if this collide is on a solid, otherwise continue check
-                // whether a solid is also in collision
-                if matches!(collision, Collision::Top) && reflect_y {
-                    scoreboard.brick_in_row = 1;
-                    scoreboard.keeping = false;
-                    penalty = penalty.max(1);
-                }
-                break;
-            }
+            break;
         }
     }
     match penalty {
@@ -602,57 +598,56 @@ fn ball_collision_system(
             transform.translation,
             transform.scale.truncate(),
         );
-        if let Some(collision) = collision {
-            if brick.just_bounced.is_some() {
-                continue;
-            }
-            collided = true;
-            if 0 < scoreboard.remain_bricks {
-                if scoreboard.keeping {
-                    scoreboard.brick_in_row += 1;
-                    if 1 < scoreboard.brick_in_row {
-                        let mut bonus = bonus_query.single_mut();
-                        bonus.row = scoreboard.brick_in_row;
-                        bonus.show = Some(2.0);
-                    }
+        let Some(collision) = collision else { continue; };
+        if brick.just_bounced.is_some() {
+            continue;
+        }
+        collided = true;
+        if 0 < scoreboard.remain_bricks {
+            if scoreboard.keeping {
+                scoreboard.brick_in_row += 1;
+                if 1 < scoreboard.brick_in_row {
+                    let mut bonus = bonus_query.single_mut();
+                    bonus.row = scoreboard.brick_in_row;
+                    bonus.show = Some(2.0);
                 }
-                scoreboard.keeping = true;
-                scoreboard.score += scoreboard.brick_in_row;
-                scoreboard.remain_bricks -= 1;
-                if 0 == scoreboard.remain_bricks {
-                    scoreboard.just_changed = Some(100.0);
-                }
-                score_changed = true;
             }
-            // commands.entity(collider_entity).despawn();
-            if brick.just_bounced.is_none() {
-                brick.velocity = Some(*velocity);
-                brick.just_bounced = Some(1.0);
+            scoreboard.keeping = true;
+            scoreboard.score += scoreboard.brick_in_row;
+            scoreboard.remain_bricks -= 1;
+            if 0 == scoreboard.remain_bricks {
+                scoreboard.just_changed = Some(100.0);
             }
+            score_changed = true;
+        }
+        // commands.entity(collider_entity).despawn();
+        if brick.just_bounced.is_none() {
+            brick.velocity = Some(*velocity);
+            brick.just_bounced = Some(1.0);
+        }
 
-            // reflect the ball when it collides
-            let mut reflect_x = false;
-            let mut reflect_y = false;
+        // reflect the ball when it collides
+        let mut reflect_x = false;
+        let mut reflect_y = false;
 
-            // only reflect if the ball's velocity is going in the opposite direction of the
-            // collision
-            match collision {
-                Collision::Left => reflect_x = velocity.x > 0.0,
-                Collision::Right => reflect_x = velocity.x < 0.0,
-                Collision::Top => reflect_y = velocity.y < 0.0,
-                Collision::Bottom => reflect_y = velocity.y > 0.0,
-                Collision::Inside => (),
-            }
+        // only reflect if the ball's velocity is going in the opposite direction of the
+        // collision
+        match collision {
+            Collision::Left => reflect_x = velocity.x > 0.0,
+            Collision::Right => reflect_x = velocity.x < 0.0,
+            Collision::Top => reflect_y = velocity.y < 0.0,
+            Collision::Bottom => reflect_y = velocity.y > 0.0,
+            Collision::Inside => (),
+        }
 
-            // reflect velocity on the x-axis if we hit something on the x-axis
-            if reflect_x {
-                velocity.x = -velocity.x;
-            }
+        // reflect velocity on the x-axis if we hit something on the x-axis
+        if reflect_x {
+            velocity.x = -velocity.x;
+        }
 
-            // reflect velocity on the y-axis if we hit something on the y-axis
-            if reflect_y {
-                velocity.y = -velocity.y;
-            }
+        // reflect velocity on the y-axis if we hit something on the y-axis
+        if reflect_y {
+            velocity.y = -velocity.y;
         }
     }
     if collided {
