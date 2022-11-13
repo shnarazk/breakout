@@ -1,5 +1,3 @@
-use bevy::window::WindowPlugin;
-
 use {
     bevy::{
         prelude::*,
@@ -8,6 +6,7 @@ use {
             Material2dPlugin,
         },
         time::FixedTimestep,
+        window::WindowPlugin,
     },
     breakout::background::{setup_background, CustomMaterial},
     rand::prelude::random,
@@ -21,13 +20,15 @@ const EYE_DIST: f32 = 30.0;
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            title: "Breakout+".to_string(),
-            width: 980.0,
-            height: 710.0,
-            ..Default::default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                title: "Breakout+".to_string(),
+                width: 980.0,
+                height: 710.0,
+                ..Default::default()
+            },
+            ..default()
+        }))
         .insert_resource(Scoreboard {
             score: 0,
             remain_bricks: 20,
@@ -37,7 +38,6 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.2)))
         // .add_plugin(ColoredMesh2dPlugin)
-        .add_plugin(WindowPlugin)
         .add_plugin(Material2dPlugin::<CustomMaterial>::default())
         .add_startup_system(setup_background)
         .add_startup_system(setup)
@@ -94,6 +94,7 @@ struct TextBonus {
     row: usize,
 }
 
+#[derive(Resource)]
 struct Scoreboard {
     score: usize,
     remain_bricks: usize,
@@ -107,11 +108,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // cameras
     // commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     // commands.spawn_bundle(UiCameraBundle::default());
     // paddle
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(0.0, -230.0, SPRITE_Z),
                 scale: Vec3::new(120.0, 30.0, 0.0),
@@ -130,7 +131,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Collider::Paddle);
     // paddle left eye
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(-EYE_DIST, -230.0, SPRITE_Z + 0.1),
                 scale: Vec3::new(0.25, 0.25, 0.0),
@@ -143,7 +144,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // paddle left black eye
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(-EYE_DIST, -230.0, SPRITE_Z + 0.2),
                 scale: Vec3::new(0.25, 0.25, 0.0),
@@ -156,7 +157,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // paddle right eye
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(EYE_DIST, -230.0, SPRITE_Z),
                 scale: Vec3::new(0.25, 0.25, 0.0),
@@ -169,7 +170,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // paddle right black eye
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(EYE_DIST, -230.0, SPRITE_Z + 0.2),
                 scale: Vec3::new(0.25, 0.25, 0.0),
@@ -181,7 +182,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(PaddleEye { is_left: false });
     // ball
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 scale: Vec3::new(BALL_SIZE, BALL_SIZE, 0.0),
                 translation: Vec3::new(0.0, -50.0, SPRITE_Z),
@@ -200,7 +201,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
     // scoreboard
     commands
-        .spawn_bundle(TextBundle {
+        .spawn(TextBundle {
             text: Text {
                 sections: vec![
                     TextSection {
@@ -237,14 +238,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // bonus notifier
     commands
-        .spawn_bundle(TextBundle {
+        .spawn(TextBundle {
             text: Text {
                 sections: vec![TextSection {
                     value: "+1".to_string(),
                     style: TextStyle {
                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 100.0,
+                        // font_size: 100.0,
                         color: Color::rgba(1.0, 0.2, 0.0, 0.8),
+                        ..default()
                     },
                 }],
                 alignment: TextAlignment {
@@ -272,7 +274,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // left
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(-bounds.x / 2.0, 0.0, SPRITE_Z),
                 scale: Vec3::new(wall_thickness, bounds.y + wall_thickness, 1.0),
@@ -287,7 +289,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Collider::Solid);
     // right
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(bounds.x / 2.0, 0.0, SPRITE_Z),
                 scale: Vec3::new(wall_thickness, bounds.y + wall_thickness, 1.0),
@@ -302,7 +304,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Collider::Solid);
     // bottom
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(0.0, -bounds.y / 2.0, SPRITE_Z),
                 scale: Vec3::new(bounds.x + wall_thickness, wall_thickness, 1.0),
@@ -317,7 +319,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Collider::Solid);
     // top
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(0.0, bounds.y / 2.0, SPRITE_Z),
                 scale: Vec3::new(bounds.x + wall_thickness, wall_thickness, 1.0),
@@ -350,7 +352,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ) + bricks_offset;
             // brick
             commands
-                .spawn_bundle(SpriteBundle {
+                .spawn(SpriteBundle {
                     sprite: Sprite {
                         color: brick_color,
                         ..Default::default()
@@ -467,15 +469,18 @@ fn scoreboard_system(
     }
 }
 
-fn bonus_notifier_system(mut bonus_query: Query<(&mut Text, &mut Style, &mut TextBonus)>) {
-    let (mut text, mut style, mut bonus) = bonus_query.single_mut();
+fn bonus_notifier_system(
+    mut bonus_query: Query<(&mut Text, &mut Style, &mut TextBonus, &mut Transform)>,
+) {
+    let (mut text, mut style, mut bonus, mut transform) = bonus_query.single_mut();
     let point = bonus.row;
     if let Some(ref mut t) = bonus.show {
         style.display = Display::Flex;
         if 0.1 < *t {
             text.sections[0].value = format!("+{}", point);
-            text.sections[0].style.font_size = 100.0 * (2.0 - *t);
             text.sections[0].style.color = Color::rgba(1.0, 0.2, 0.0, t.sqrt());
+            let s = 5.0 * (2.0 - *t);
+            transform.scale = Vec3::new(s, s, 1.0);
             *t *= 0.9;
         } else {
             bonus.show = None;

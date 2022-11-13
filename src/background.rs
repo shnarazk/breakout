@@ -13,7 +13,7 @@ pub fn setup_background(
     // mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let rect = Mesh::from(shape::Quad::default());
-    commands.spawn_bundle(MaterialMesh2dBundle {
+    commands.spawn(MaterialMesh2dBundle {
         mesh: meshes.add(rect).into(),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
         // material: materials.add(ColorMaterial::from(Color::PURPLE)),
