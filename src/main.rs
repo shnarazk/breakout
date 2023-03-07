@@ -5,7 +5,7 @@ use {
             collide_aabb::{collide, Collision},
             Material2dPlugin,
         },
-        time::FixedTimestep,
+        // time::fixed_timestep,
         window::WindowPlugin,
     },
     breakout::background::{setup_background, CustomMaterial},
@@ -21,7 +21,7 @@ const EYE_DIST: f32 = 30.0;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: WindowDescriptor {
                 title: "Breakout+".to_string(),
                 width: 980.0,
                 height: 710.0,
@@ -41,14 +41,12 @@ fn main() {
         .add_plugin(Material2dPlugin::<CustomMaterial>::default())
         .add_startup_system(setup_background)
         .add_startup_system(setup)
-        .add_system_set(
-            SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
-                .with_system(paddle_movement_system)
-                .with_system(ball_collision_system)
-                .with_system(ball_movement_system)
-                .with_system(brick_movement_system),
-        )
+        .add_systems((
+            paddle_movement_system,
+            ball_collision_system,
+            ball_movement_system,
+            brick_movement_system,
+        ))
         .add_system(scoreboard_system)
         .add_system(bonus_notifier_system)
         // .add_system(bevy::input::system::exit_on_all_closed)
@@ -240,6 +238,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(TextBundle {
             text: Text {
+                linebreak_behaviour: bevy::text::BreakLineOn::AnyCharacter,
                 sections: vec![TextSection {
                     value: "+1".to_string(),
                     style: TextStyle {
