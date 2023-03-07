@@ -6,7 +6,7 @@ use {
             Material2dPlugin,
         },
         // time::fixed_timestep,
-        window::WindowPlugin,
+        window::{WindowPlugin, WindowResolution},
     },
     breakout::background::{setup_background, CustomMaterial},
     rand::prelude::random,
@@ -21,12 +21,11 @@ const EYE_DIST: f32 = 30.0;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: WindowDescriptor {
+            primary_window: Some(Window {
                 title: "Breakout+".to_string(),
-                width: 980.0,
-                height: 710.0,
+                resolution: WindowResolution::new(980.0, 710.0),
                 ..Default::default()
-            },
+            }),
             ..default()
         }))
         .insert_resource(Scoreboard {
@@ -248,10 +247,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         ..default()
                     },
                 }],
-                alignment: TextAlignment {
-                    horizontal: HorizontalAlign::Center,
-                    ..Default::default()
-                },
+                alignment: TextAlignment::Center,
             },
             style: Style {
                 position_type: PositionType::Absolute,
